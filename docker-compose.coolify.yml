@@ -1,0 +1,100 @@
+services:
+  auth:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        APP_PATH: app/auth
+    restart: always
+    environment:
+      AUTH_ADDR: ":8001"
+      DB_PATH: /app/data/intervoice.db
+      JWT_SECRET: ${JWT_SECRET:-intervoice-dev-secret}
+    volumes:
+      - ./data:/app/data
+
+  attendance:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        APP_PATH: app/attendance
+    restart: always
+    environment:
+      ATTENDANCE_ADDR: ":8002"
+      DB_PATH: /app/data/intervoice.db
+      JWT_SECRET: ${JWT_SECRET:-intervoice-dev-secret}
+    volumes:
+      - ./data:/app/data
+
+  voice:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        APP_PATH: app/voice
+    restart: always
+    environment:
+      VOICE_ADDR: ":8003"
+      DB_PATH: /app/data/intervoice.db
+      JWT_SECRET: ${JWT_SECRET:-intervoice-dev-secret}
+      ARK_API_KEY: ${ARK_API_KEY:-}
+      ARK_MODEL: ${ARK_MODEL:-doubao-seed-1-6-250615}
+      ARK_ENDPOINT_ID: ${ARK_ENDPOINT_ID:-6030fa1e-eaeb-4664-b330-1d81b08fd526}
+      SPEECH_API_KEY: ${SPEECH_API_KEY:-}
+      SPEECH_APP_ID: ${SPEECH_APP_ID:-}
+      SPEECH_TOKEN: ${SPEECH_TOKEN:-}
+      SPEECH_RESOURCE_ID: ${SPEECH_RESOURCE_ID:-volc.seedasr.auc}
+    volumes:
+      - ./data:/app/data
+
+  admin:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        APP_PATH: app/admin
+    restart: always
+    environment:
+      ADMIN_ADDR: ":8004"
+      DB_PATH: /app/data/intervoice.db
+      JWT_SECRET: ${JWT_SECRET:-intervoice-dev-secret}
+    volumes:
+      - ./data:/app/data
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        APP_PATH: app/gateway
+    restart: always
+    depends_on:
+      - auth
+      - attendance
+      - voice
+      - admin
+    environment:
+      GATEWAY_ADDR: ":8010"
+      JWT_SECRET: ${JWT_SECRET:-intervoice-dev-secret}
+      AUTH_BASE_URL: http://auth:8001
+      ATTENDANCE_BASE_URL: http://attendance:8002
+      VOICE_BASE_URL: http://voice:8003
+      ADMIN_BASE_URL: http://admin:8004
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: always
+
+  app:
+    image: nginx:1.27-alpine
+    restart: always
+    depends_on:
+      - gateway
+      - frontend
+    environment:
+      - SERVICE_URL_APP_80
+    volumes:
+      - ./deploy/nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro

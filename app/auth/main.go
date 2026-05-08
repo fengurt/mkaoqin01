@@ -271,6 +271,11 @@ CREATE TABLE IF NOT EXISTS employee_schedules (
   schedule_text TEXT NOT NULL,
   UNIQUE(staff_id, team_name, week_range)
 );
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_users_account ON users(account);
+CREATE INDEX IF NOT EXISTS idx_attendance_user_occurred ON attendance_records(user_id, occurred_at);
+CREATE INDEX IF NOT EXISTS idx_attendance_occurred ON attendance_records(occurred_at);
+CREATE INDEX IF NOT EXISTS idx_attendance_status_occurred ON attendance_records(status, occurred_at);
 INSERT OR IGNORE INTO users (id, account, password, role, display_name) VALUES
   (900001, 'admin', '123456a', 'admin', '系统管理员'),
   (900002, 'admin01', '123456a', 'admin', '系统管理员-兼容账号'),
