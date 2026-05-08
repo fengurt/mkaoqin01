@@ -27,21 +27,8 @@
           <span class="material-symbols-outlined st-login-btn-icon">arrow_forward</span>
         </button>
 
-        <div class="st-login-divider">
-          <div class="st-login-line"></div>
-          <span>或使用</span>
-          <div class="st-login-line"></div>
-        </div>
-
-        <button class="st-login-btn-secondary" type="button" @click="handleWechatLogin">
-          <span class="material-symbols-outlined st-login-btn-icon">chat</span>
-          微信登录
-        </button>
       </form>
 
-      <footer class="st-login-footer">
-        演示账号：员工(StaffID，如 132369) / 123456a，管理员：admin / 123456a
-      </footer>
     </main>
   </div>
 </template>
@@ -50,7 +37,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
-import { login, wechatLogin } from '../api'
+import { login } from '../api'
 
 const router = useRouter()
 const account = ref('132369')
@@ -74,12 +61,6 @@ const handleLogin = async () => {
   } catch {
     showToast('登录失败，请检查账号密码')
   }
-}
-
-const handleWechatLogin = async () => {
-  const response = await wechatLogin()
-  storeSession(response.data)
-  routeByRole(response.data.user.role)
 }
 </script>
 
@@ -135,8 +116,7 @@ const handleWechatLogin = async () => {
   font-size: 16px;
 }
 
-.st-login-btn-primary,
-.st-login-btn-secondary {
+.st-login-btn-primary {
   height: 48px;
   border-radius: 8px;
   border: none;
@@ -149,17 +129,6 @@ const handleWechatLogin = async () => {
 }
 
 .st-login-btn-primary { background: #2563eb; color: #fff; }
-.st-login-btn-secondary { background: #fff; color: #004ac6; border: 1px solid #c3c6d7; }
 .st-login-btn-icon { font-size: 20px; }
 
-.st-login-divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: #434655;
-  font-size: 12px;
-}
-.st-login-line { flex: 1; height: 1px; background: #c3c6d7; }
-
-.st-login-footer { text-align: center; color: #434655; font-size: 14px; }
 </style>

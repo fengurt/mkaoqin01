@@ -28,6 +28,9 @@ func main() {
 	hsrv.HandleFunc("/", handleOptions)
 	hsrv.HandleFunc("/v1/auth/login", withCORS(proxyJSON(authBaseURL+"/v1/auth/login", false)))
 	hsrv.HandleFunc("/v1/auth/wechat", withCORS(proxyJSON(authBaseURL+"/v1/auth/wechat", false)))
+	hsrv.HandleFunc("/v1/auth/users", withCORS(proxyGET(authBaseURL+"/v1/auth/users", true)))
+	hsrv.HandleFunc("/v1/auth/password/change", withCORS(proxyJSON(authBaseURL+"/v1/auth/password/change", true)))
+	hsrv.HandleFunc("/v1/auth/password/reset", withCORS(proxyJSON(authBaseURL+"/v1/auth/password/reset", true)))
 	hsrv.HandleFunc("/v1/voice/recognize", withCORS(proxyMultipart(voiceBaseURL+"/v1/voice/recognize", true)))
 	hsrv.HandleFunc("/v1/attendance/submit", withCORS(proxyJSON(attendanceBaseURL+"/v1/attendance/submit", true)))
 	hsrv.HandleFunc("/v1/attendance/today", withCORS(proxyGET(attendanceBaseURL+"/v1/attendance/today", true)))
@@ -57,6 +60,9 @@ func proxyJSON(targetURL string, authRequired bool) http.HandlerFunc {
 		bodyBytes, _ := io.ReadAll(request.Body)
 		targetRequest, _ := http.NewRequest(http.MethodPost, targetURL, bytes.NewReader(bodyBytes))
 		targetRequest.Header.Set("Content-Type", "application/json")
+		if authRequired {
+			targetRequest.Header.Set("Authorization", request.Header.Get("Authorization"))
+		}
 		proxyRequest(writer, targetRequest)
 	}
 }
@@ -73,6 +79,9 @@ func proxyGET(targetURL string, authRequired bool) http.HandlerFunc {
 			requestURL = requestURL + "?" + queryString
 		}
 		targetRequest, _ := http.NewRequest(http.MethodGet, requestURL, nil)
+		if authRequired {
+			targetRequest.Header.Set("Authorization", request.Header.Get("Authorization"))
+		}
 		proxyRequest(writer, targetRequest)
 	}
 }
@@ -112,6 +121,9 @@ func proxyMultipart(targetURL string, authRequired bool) http.HandlerFunc {
 
 		targetRequest, _ := http.NewRequest(http.MethodPost, targetURL, &body)
 		targetRequest.Header.Set("Content-Type", writerForm.FormDataContentType())
+		if authRequired {
+			targetRequest.Header.Set("Authorization", request.Header.Get("Authorization"))
+		}
 		proxyRequest(writer, targetRequest)
 	}
 }

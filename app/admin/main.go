@@ -358,6 +358,7 @@ INSERT OR IGNORE INTO employee_schedules (staff_id, staff_name, team_name, week_
 	if _, err := database.Exec(schema); err != nil {
 		panic(err)
 	}
+	mustEnsureTwoWeeksSimulatedAttendance(database)
 }
 
 func writeJSON(writer http.ResponseWriter, statusCode int, payload any) {
@@ -378,4 +379,88 @@ func maxInt64(left int64, right int64) int64 {
 		return left
 	}
 	return right
+}
+
+func mustEnsureTwoWeeksSimulatedAttendance(database *sql.DB) {
+	if _, err := database.Exec(`CREATE TABLE IF NOT EXISTS seed_markers (
+  marker_key TEXT PRIMARY KEY,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+)`); err != nil {
+		panic(err)
+	}
+
+	const markerKey = "team_attendance_14d_v1"
+	var markerCount int64
+	_ = database.QueryRow("SELECT COUNT(1) FROM seed_markers WHERE marker_key = ?", markerKey).Scan(&markerCount)
+	if markerCount > 0 {
+		return
+	}
+
+	rows, err := database.Query("SELECT id, display_name FROM users WHERE role = 'employee' ORDER BY id ASC")
+	if err != nil {
+		panic(err)
+	}
+	defer rows.Close()
+
+	type employee struct {
+		id   int64
+		name string
+	}
+	employees := make([]employee, 0)
+	for rows.Next() {
+		var item employee
+		_ = rows.Scan(&item.id, &item.name)
+		employees = append(employees, item)
+	}
+	if len(employees) == 0 {
+		return
+	}
+
+	tx, err := database.Begin()
+	if err != nil {
+		panic(err)
+	}
+	defer tx.Rollback()
+
+	insertStatement, err := tx.Prepare(`INSERT INTO attendance_records (user_id, status, location, reason, occurred_at) VALUES (?, ?, ?, ?, ?)`)
+	if err != nil {
+		panic(err)
+	}
+	defer insertStatement.Close()
+
+	locations := []string{"公司", "客户现场", "门店", "商务区", "会议室A"}
+	reasons := map[string]string{
+		"OUTING":        "拜访客户",
+		"DINING":        "商务用餐",
+		"BUSINESS_TRIP": "访问客户",
+		"OFFICE":        "在岗办公",
+	}
+	statusPool := []string{"OUTING", "DINING", "BUSINESS_TRIP", "OFFICE"}
+
+	now := time.Now()
+	for dayOffset := 13; dayOffset >= 0; dayOffset -= 1 {
+		currentDate := now.AddDate(0, 0, -dayOffset)
+		for _, item := range employees {
+			baseHour := 8 + int((item.id+int64(dayOffset))%3)
+			checkInMinute := 10 + int((item.id+int64(dayOffset*7))%35)
+			checkInTime := time.Date(currentDate.Year(), currentDate.Month(), currentDate.Day(), baseHour, checkInMinute, 0, 0, time.Local)
+			_, _ = insertStatement.Exec(item.id, "CHECK_IN", "公司", "正常签到", checkInTime.Format("2006-01-02 15:04:05"))
+
+			statusIndex := int((item.id + int64(dayOffset*5)) % int64(len(statusPool)))
+			activityStatus := statusPool[statusIndex]
+			activityLocation := locations[int((item.id+int64(dayOffset*3))%int64(len(locations)))]
+			activityTime := checkInTime.Add(time.Duration(3+int((item.id+int64(dayOffset))%4)) * time.Hour)
+			_, _ = insertStatement.Exec(item.id, activityStatus, activityLocation, reasons[activityStatus], activityTime.Format("2006-01-02 15:04:05"))
+
+			checkOutTime := time.Date(currentDate.Year(), currentDate.Month(), currentDate.Day(), 18+int((item.id+int64(dayOffset))%2), int((item.id+int64(dayOffset*11))%30), 0, 0, time.Local)
+			_, _ = insertStatement.Exec(item.id, "CHECK_OUT", "公司", "结束工作", checkOutTime.Format("2006-01-02 15:04:05"))
+		}
+	}
+
+	if _, err := tx.Exec("INSERT OR IGNORE INTO seed_markers (marker_key) VALUES (?)", markerKey); err != nil {
+		panic(err)
+	}
+	if err := tx.Commit(); err != nil {
+		panic(err)
+	}
 }

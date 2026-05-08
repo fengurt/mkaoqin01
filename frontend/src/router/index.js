@@ -7,6 +7,9 @@ import MyAttendanceView from '../views/screens/MyAttendanceView.vue'
 import TeamAttendanceView from '../views/screens/TeamAttendanceView.vue'
 import DetailedAttendanceReport from '../views/screens/DetailedAttendanceReport.vue'
 import EmployeeProfile from '../views/screens/EmployeeProfile.vue'
+import AccountSecurityView from '../views/screens/AccountSecurityView.vue'
+import AdminAccountManagementView from '../views/screens/AdminAccountManagementView.vue'
+import TeamMemberHistoryView from '../views/screens/TeamMemberHistoryView.vue'
 
 const routes = [
   { path: '/', component: Login },
@@ -23,6 +26,9 @@ const routes = [
   { path: '/team-attendance/month', component: TeamAttendanceView, props: { period: 'month' } },
   { path: '/admin/report', component: DetailedAttendanceReport },
   { path: '/employee/profile', component: EmployeeProfile },
+  { path: '/me/security', component: AccountSecurityView },
+  { path: '/me/accounts', component: AdminAccountManagementView },
+  { path: '/team-member/:userId', component: TeamMemberHistoryView },
 ]
 
 const router = createRouter({
@@ -34,7 +40,7 @@ router.beforeEach((to) => {
   if (to.path === '/') return true
   const token = localStorage.getItem('token')
   if (!token) return '/'
-  if (to.path.startsWith('/team-attendance') || to.path === '/admin/report') {
+  if (to.path.startsWith('/team-attendance') || to.path === '/admin/report' || to.path === '/me/accounts' || to.path.startsWith('/team-member/')) {
     const user = JSON.parse(localStorage.getItem('user') || '{}')
     if (user.role !== 'admin') return '/me'
   }

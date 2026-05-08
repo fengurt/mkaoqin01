@@ -52,8 +52,8 @@
    - `docker compose -f docker-compose.prod.yml down`
 
 ## Demo accounts
-- employee: `staff01 / 123456`
-- admin: `admin01 / 123456`
+- employee: `Staff ID / 123456a` (e.g. `132369 / 123456a`, `118919 / 123456a`)
+- admin: `admin / 123456a` (compatible: `admin01 / 123456a`)
 
 ## Notes
 - Wechat login is mocked in MVP.
