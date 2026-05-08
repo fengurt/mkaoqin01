@@ -3,8 +3,10 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-kratos/kratos/v2"
@@ -21,6 +23,16 @@ type loginRequest struct {
 type loginResponse struct {
 	Token string         `json:"token"`
 	User  map[string]any `json:"user"`
+}
+
+type passwordChangeRequest struct {
+	CurrentPassword string `json:"currentPassword"`
+	NewPassword     string `json:"newPassword"`
+}
+
+type adminResetPasswordRequest struct {
+	UserID      int64  `json:"userId"`
+	NewPassword string `json:"newPassword"`
 }
 
 func main() {
@@ -67,6 +79,100 @@ func main() {
 		})
 	})
 
+	hsrv.HandleFunc("/v1/auth/users", func(writer http.ResponseWriter, request *http.Request) {
+		userID, role, ok := parseJWTFromRequest(request)
+		if !ok || userID == 0 {
+			writeJSON(writer, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+			return
+		}
+		if role != "admin" {
+			writeJSON(writer, http.StatusForbidden, map[string]string{"error": "admin required"})
+			return
+		}
+
+		rows, err := database.Query("SELECT id, account, role, display_name FROM users ORDER BY id ASC")
+		if err != nil {
+			writeJSON(writer, http.StatusInternalServerError, map[string]string{"error": "query users failed"})
+			return
+		}
+		defer rows.Close()
+
+		items := make([]map[string]any, 0)
+		for rows.Next() {
+			var id int64
+			var account string
+			var itemRole string
+			var displayName string
+			_ = rows.Scan(&id, &account, &itemRole, &displayName)
+			items = append(items, map[string]any{
+				"id":          id,
+				"account":     account,
+				"role":        itemRole,
+				"displayName": displayName,
+			})
+		}
+		writeJSON(writer, http.StatusOK, map[string]any{"items": items})
+	})
+
+	hsrv.HandleFunc("/v1/auth/password/change", func(writer http.ResponseWriter, request *http.Request) {
+		userID, _, ok := parseJWTFromRequest(request)
+		if !ok || userID == 0 {
+			writeJSON(writer, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+			return
+		}
+		var payload passwordChangeRequest
+		if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
+			writeJSON(writer, http.StatusBadRequest, map[string]string{"error": "invalid request"})
+			return
+		}
+		if len(payload.NewPassword) < 6 {
+			writeJSON(writer, http.StatusBadRequest, map[string]string{"error": "new password too short"})
+			return
+		}
+
+		var existingPassword string
+		if err := database.QueryRow("SELECT password FROM users WHERE id = ?", userID).Scan(&existingPassword); err != nil {
+			writeJSON(writer, http.StatusNotFound, map[string]string{"error": "user not found"})
+			return
+		}
+		if existingPassword != payload.CurrentPassword {
+			writeJSON(writer, http.StatusBadRequest, map[string]string{"error": "current password incorrect"})
+			return
+		}
+		if _, err := database.Exec("UPDATE users SET password = ? WHERE id = ?", payload.NewPassword, userID); err != nil {
+			writeJSON(writer, http.StatusInternalServerError, map[string]string{"error": "update password failed"})
+			return
+		}
+		writeJSON(writer, http.StatusOK, map[string]string{"status": "ok"})
+	})
+
+	hsrv.HandleFunc("/v1/auth/password/reset", func(writer http.ResponseWriter, request *http.Request) {
+		userID, role, ok := parseJWTFromRequest(request)
+		if !ok || userID == 0 {
+			writeJSON(writer, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+			return
+		}
+		if role != "admin" {
+			writeJSON(writer, http.StatusForbidden, map[string]string{"error": "admin required"})
+			return
+		}
+
+		var payload adminResetPasswordRequest
+		if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
+			writeJSON(writer, http.StatusBadRequest, map[string]string{"error": "invalid request"})
+			return
+		}
+		if payload.UserID == 0 || len(payload.NewPassword) < 6 {
+			writeJSON(writer, http.StatusBadRequest, map[string]string{"error": "invalid payload"})
+			return
+		}
+		if _, err := database.Exec("UPDATE users SET password = ? WHERE id = ?", payload.NewPassword, payload.UserID); err != nil {
+			writeJSON(writer, http.StatusInternalServerError, map[string]string{"error": "reset password failed"})
+			return
+		}
+		writeJSON(writer, http.StatusOK, map[string]string{"status": "ok"})
+	})
+
 	hsrv.HandleFunc("/healthz", func(writer http.ResponseWriter, request *http.Request) {
 		writeJSON(writer, http.StatusOK, map[string]string{"service": "auth-svc", "status": "ok"})
 	})
@@ -86,6 +192,34 @@ func signJWT(userID int64, role string) (string, error) {
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(secret)
+}
+
+func parseJWTFromRequest(request *http.Request) (int64, string, bool) {
+	authHeader := request.Header.Get("Authorization")
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		return 0, "", false
+	}
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	secret := []byte(envOr("JWT_SECRET", "intervoice-dev-secret"))
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected token signing method")
+		}
+		return secret, nil
+	})
+	if err != nil || token == nil || !token.Valid {
+		return 0, "", false
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return 0, "", false
+	}
+	role, _ := claims["role"].(string)
+	subNumber, subOK := claims["sub"].(float64)
+	if !subOK {
+		return 0, "", false
+	}
+	return int64(subNumber), role, true
 }
 
 func mustOpenDatabase() *sql.DB {
@@ -139,6 +273,8 @@ CREATE TABLE IF NOT EXISTS employee_schedules (
 );
 INSERT OR IGNORE INTO users (id, account, password, role, display_name) VALUES
   (900001, 'admin', '123456a', 'admin', '系统管理员'),
+  (900002, 'admin01', '123456a', 'admin', '系统管理员-兼容账号'),
+  (900101, 'staff01', '123456a', 'employee', '员工演示账号'),
   (118919, '118919', '123456a', 'employee', 'Justin Lu'),
   (132369, '132369', '123456a', 'employee', 'Albee Liu'),
   (132387, '132387', '123456a', 'employee', 'Betty Zhang'),
@@ -229,7 +365,11 @@ INSERT OR IGNORE INTO employee_schedules (staff_id, staff_name, team_name, week_
   ('141780','Sammi Xian','Isaac Team','4.27-5.3','Mon:1100-2036; Tue:RDO; Wed:RV; Thu:RV; Fri:PH; Sat-Sun:1100-2036'),
   ('141780','Sammi Xian','Bella Team','5.4-5.10','Mon:1100-2036; Tue:RDO; Wed:RDO; Thu-Sun:1100-2036'),
   ('141906','Duke Sui','Isaac Team','4.27-5.3','Mon:RDO; Tue:RDO; Wed-Thu:1200-2136; Fri:PH; Sat-Sun:1200-2136'),
-  ('141906','Duke Sui','Bella Team','5.4-5.10','Mon:RDO; Tue:RDO; Wed-Sun:1200-2136');`
+  ('141906','Duke Sui','Bella Team','5.4-5.10','Mon:RDO; Tue:RDO; Wed-Sun:1200-2136');
+INSERT OR IGNORE INTO users (id, account, password, role, display_name)
+SELECT CAST(staff_id AS INTEGER), staff_id, '123456a', 'employee', staff_name
+FROM employee_schedules
+GROUP BY staff_id, staff_name;`
 	if _, err := database.Exec(schema); err != nil {
 		panic(err)
 	}

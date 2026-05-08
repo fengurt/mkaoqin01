@@ -64,17 +64,47 @@
             class="avatar-item"
             :class="{ active: index === selectedMemberIndex }"
             @click="selectedMemberIndex = index"
+            @dblclick="goMemberHistory(member)"
           >
             <span>{{ memberInitial(member.userName) }}</span>
             <small>{{ shortName(member.userName) }}</small>
           </button>
         </div>
         <div v-if="selectedMember" class="member-detail">
-          <h4>{{ selectedMember.userName }}</h4>
-          <p>状态：{{ selectedMember.statusLabel }}</p>
-          <p>地点：{{ selectedMember.location || '未填写' }}</p>
-          <p>说明：{{ selectedMember.reason || '未填写' }}</p>
-          <p>时间：{{ selectedMember.occurredAt || '未汇报' }}</p>
+          <div class="detail-head">
+            <h4>{{ selectedMember.userName }}</h4>
+            <button class="detail-link" type="button" @click="goMemberHistory(selectedMember)">
+              查看历史汇总
+              <span class="material-symbols-outlined">arrow_forward</span>
+            </button>
+          </div>
+          <div class="behavior-grid">
+            <div class="behavior-item">
+              <span>签到次数</span>
+              <strong>{{ selectedBehaviorSummary.checkInCount }}</strong>
+            </div>
+            <div class="behavior-item">
+              <span>签退次数</span>
+              <strong>{{ selectedBehaviorSummary.checkOutCount }}</strong>
+            </div>
+            <div class="behavior-item">
+              <span>外出/出差</span>
+              <strong>{{ selectedBehaviorSummary.outingLikeCount }}</strong>
+            </div>
+            <div class="behavior-item">
+              <span>用餐记录</span>
+              <strong>{{ selectedBehaviorSummary.diningCount }}</strong>
+            </div>
+          </div>
+          <div class="mini-timeline">
+            <div class="mini-title">当日行为记录（可无时间）</div>
+            <div v-if="selectedMemberRecords.length === 0" class="timeline-empty">当日暂无行为记录</div>
+            <div v-for="record in selectedMemberRecords" :key="record.id" class="mini-item">
+              <span class="mini-time">{{ clockText(record.occurredAt) }}</span>
+              <span class="mini-status">{{ record.statusLabel }}</span>
+              <span class="mini-desc">{{ record.reason }} · {{ record.location }}</span>
+            </div>
+          </div>
         </div>
       </section>
     </main>
@@ -95,16 +125,19 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import AppBottomNav from '../../components/AppBottomNav.vue'
-import { getAdminTeam } from '../../api'
-import { normalizeTeamMember } from '../../data/models'
+import { getAdminTeam, getAttendanceByDate } from '../../api'
+import { normalizeAttendanceRecord, normalizeTeamMember } from '../../data/models'
 
 const team = ref([])
 const selectedDate = ref(new Date().toISOString().slice(0, 10))
 const weekStartDate = ref(getWeekStart(new Date()))
 const selectedMemberIndex = ref(0)
 const showMonthPicker = ref(false)
+const selectedMemberRecords = ref([])
+const router = useRouter()
 
 const monthOptions = computed(() => {
   const year = new Date(selectedDate.value).getFullYear()
@@ -139,6 +172,15 @@ const weekRangeLabel = computed(() => {
 })
 
 const selectedMember = computed(() => team.value[selectedMemberIndex.value] || null)
+const selectedBehaviorSummary = computed(() => {
+  const rows = selectedMemberRecords.value
+  return {
+    checkInCount: rows.filter((item) => item.status === 'CHECK_IN').length,
+    checkOutCount: rows.filter((item) => item.status === 'CHECK_OUT').length,
+    outingLikeCount: rows.filter((item) => item.status === 'OUTING' || item.status === 'BUSINESS_TRIP').length,
+    diningCount: rows.filter((item) => item.status === 'DINING').length,
+  }
+})
 
 const summary = computed(() => {
   const reportedMembers = team.value.filter((member) => Boolean(member.occurredAt)).length
@@ -172,6 +214,16 @@ const loadData = async () => {
   if (selectedMemberIndex.value >= team.value.length) {
     selectedMemberIndex.value = 0
   }
+  await loadSelectedMemberRecords()
+}
+
+const loadSelectedMemberRecords = async () => {
+  if (!selectedMember.value?.userId) {
+    selectedMemberRecords.value = []
+    return
+  }
+  const response = await getAttendanceByDate(selectedMember.value.userId, selectedDate.value)
+  selectedMemberRecords.value = (response.data.records || []).map(normalizeAttendanceRecord)
 }
 
 const selectDate = async (date) => {
@@ -202,6 +254,19 @@ const moveSelected = (delta) => {
 
 const memberInitial = (name) => (name || '员').slice(0, 1)
 const shortName = (name) => (name || '').slice(0, 2)
+const clockText = (dateText) => {
+  if (!dateText) return '未记时'
+  const date = new Date(dateText)
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+const goMemberHistory = async (member) => {
+  if (!member?.userId) return
+  await router.push(`/team-member/${member.userId}?name=${encodeURIComponent(member.userName || '')}`)
+}
+
+watch(selectedMemberIndex, () => {
+  void loadSelectedMemberRecords()
+})
 
 onMounted(async () => {
   weekStartDate.value = getWeekStart(new Date(`${selectedDate.value}T00:00:00`))
@@ -235,8 +300,19 @@ onMounted(async () => {
 .avatar-item span { width:30px; height:30px; border-radius:999px; background:#e8eeff; color:#2c5ee8; display:flex; align-items:center; justify-content:center; font-weight:700; }
 .avatar-item.active { border-color:#2c5ee8; background:#edf2ff; color:#2c5ee8; }
 .member-detail { border:1px solid #e4eafc; border-radius:10px; margin-top:10px; padding:10px; background:#fafcff; }
-.member-detail h4 { margin:0 0 6px; color:#102a5c; }
-.member-detail p { margin:4px 0; font-size:13px; color:#475569; }
+.detail-head { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.member-detail h4 { margin:0; color:#102a5c; }
+.detail-link { border:0; background:transparent; color:#2c5ee8; display:flex; align-items:center; gap:2px; font-size:12px; }
+.behavior-grid { margin-top:10px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.behavior-item { border:1px solid #dbe5ff; border-radius:10px; padding:8px; display:flex; justify-content:space-between; font-size:12px; color:#51607e; }
+.behavior-item strong { color:#2c5ee8; font-size:15px; }
+.mini-timeline { margin-top:10px; border:1px solid #e4eafc; border-radius:10px; padding:8px; display:flex; flex-direction:column; gap:6px; max-height:156px; overflow:auto; }
+.mini-title { font-size:12px; color:#64748b; }
+.timeline-empty { color:#64748b; font-size:12px; }
+.mini-item { display:grid; grid-template-columns:46px 56px minmax(0,1fr); gap:8px; align-items:center; font-size:12px; color:#475569; }
+.mini-time { color:#64748b; }
+.mini-status { color:#2c5ee8; font-weight:700; }
+.mini-desc { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .month-popup { padding: 16px; }
 .month-popup h3 { margin:0 0 12px; color:#102a5c; }
 .month-grid { display:grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap:8px; }

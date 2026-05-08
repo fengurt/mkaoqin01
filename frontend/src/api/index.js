@@ -15,6 +15,9 @@ api.interceptors.request.use((config) => {
 
 export const login = (payload) => api.post('/v1/auth/login', payload)
 export const wechatLogin = () => api.post('/v1/auth/wechat', { code: 'demo' })
+export const getAuthUsers = () => api.get('/v1/auth/users')
+export const changePassword = (payload) => api.post('/v1/auth/password/change', payload)
+export const resetUserPassword = (payload) => api.post('/v1/auth/password/reset', payload)
 export const recognizeVoice = (formData) => api.post('/v1/voice/recognize', formData)
 export const submitStatus = (payload) => api.post('/v1/attendance/submit', payload)
 export const getTodayRecords = (userId) => api.get('/v1/attendance/today', { params: { userId } })

@@ -38,9 +38,22 @@
 5. Stop:
    - `docker compose down`
 
+## Docker production profile
+1. Prepare env:
+   - `cp .env.example .env`
+   - Optional: `HTTP_PORT=80`
+2. Start production stack:
+   - `docker compose -f docker-compose.prod.yml up --build -d`
+3. Check:
+   - `docker compose -f docker-compose.prod.yml ps`
+4. Access:
+   - `http://<server-ip>:${HTTP_PORT:-80}`
+5. Stop:
+   - `docker compose -f docker-compose.prod.yml down`
+
 ## Demo accounts
-- employee: `staff01 / 123456`
-- admin: `admin01 / 123456`
+- employee: `Staff ID / 123456a` (e.g. `132369 / 123456a`, `118919 / 123456a`)
+- admin: `admin / 123456a` (compatible: `admin01 / 123456a`)
 
 ## Notes
 - Wechat login is mocked in MVP.
