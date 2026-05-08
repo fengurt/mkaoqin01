@@ -51,6 +51,22 @@
 5. Stop:
    - `docker compose -f docker-compose.prod.yml down`
 
+## Coolify deployment (recommended bundle)
+Use a single Docker Compose stack in Coolify with:
+- compose file: `docker-compose.coolify.yml`
+- public service: `app` (nginx)
+- private services: `auth`, `attendance`, `voice`, `admin`, `gateway`, `frontend`
+
+Why this is better than one mega-container:
+- keeps service isolation and easier debugging/restarts
+- avoids process supervisor complexity in one image
+- matches Coolify's native compose-stack model
+
+Notes:
+- Do not define custom networks; Coolify manages networking.
+- Inter-service calls use service names (`http://auth:8001`, etc.).
+- Persisted data is mounted from `./data` (SQLite file survives redeploys).
+
 ## Demo accounts
 - employee: `Staff ID / 123456a` (e.g. `132369 / 123456a`, `118919 / 123456a`)
 - admin: `admin / 123456a` (compatible: `admin01 / 123456a`)
