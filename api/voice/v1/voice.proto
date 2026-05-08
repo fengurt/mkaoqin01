@@ -1,0 +1,22 @@
+syntax = "proto3";
+package voice.v1;
+
+option go_package = "intervoice/api/voice/v1;voicev1";
+
+service VoiceService {
+  rpc RecognizeAndExtract(RecognizeRequest) returns (RecognizeReply);
+}
+
+message RecognizeRequest {
+  bytes audio = 1;
+  string mime = 2;
+}
+
+message RecognizeReply {
+  string transcript = 1;
+  string status = 2;
+  string location = 3;
+  string reason = 4;
+  string occurred_at = 5;
+  double confidence = 6;
+}

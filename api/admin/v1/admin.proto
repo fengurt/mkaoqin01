@@ -1,0 +1,24 @@
+syntax = "proto3";
+package admin.v1;
+
+option go_package = "intervoice/api/admin/v1;adminv1";
+
+service AdminService {
+  rpc ListTodayBoard(ListTodayBoardRequest) returns (ListTodayBoardReply);
+}
+
+message ListTodayBoardRequest {
+  string department = 1;
+}
+
+message BoardItem {
+  int64 user_id = 1;
+  string user_name = 2;
+  string status = 3;
+  string location = 4;
+  string occurred_at = 5;
+}
+
+message ListTodayBoardReply {
+  repeated BoardItem items = 1;
+}

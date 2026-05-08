@@ -1,0 +1,38 @@
+syntax = "proto3";
+package attendance.v1;
+
+option go_package = "intervoice/api/attendance/v1;attendancev1";
+
+service AttendanceService {
+  rpc SubmitStatus(SubmitStatusRequest) returns (SubmitStatusReply);
+  rpc ListMyToday(ListMyTodayRequest) returns (ListMyTodayReply);
+}
+
+message SubmitStatusRequest {
+  int64 user_id = 1;
+  string status = 2;
+  string location = 3;
+  string reason = 4;
+  string occurred_at = 5;
+  string attachment_url = 6;
+}
+
+message SubmitStatusReply {
+  int64 id = 1;
+}
+
+message ListMyTodayRequest {
+  int64 user_id = 1;
+}
+
+message AttendanceRecord {
+  int64 id = 1;
+  string status = 2;
+  string location = 3;
+  string reason = 4;
+  string occurred_at = 5;
+}
+
+message ListMyTodayReply {
+  repeated AttendanceRecord records = 1;
+}

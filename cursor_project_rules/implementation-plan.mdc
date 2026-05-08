@@ -1,0 +1,37 @@
+# Implementation Plan Progress
+
+1. scaffold - Done
+Done - Created monorepo root structure, base directories, and environment template.
+Done - Added startup/shutdown scripts and baseline README for MVP workflow.
+
+2. kratos-services - Done
+Done - Created five service modules under app/ with Kratos runtime entrypoints.
+Done - Wired dedicated service names and ports for gateway/auth/attendance/voice/admin.
+
+3. proto-sqlite - Done
+Done - Added API protobuf contracts for auth, attendance, voice, and admin service boundaries.
+Done - Created SQLite schema and seed users (staff01/admin01) in data/schema.sql.
+
+4. voice-svc - Done
+Done - Implemented /v1/voice/recognize with multipart audio handling and structured JSON response.
+Done - Added OpenSpeech ASR + Doubao NLU calls with deterministic fallback when credentials or upstream fail.
+
+5. voice-test - Done
+Done - Added synthetic sample audio and voice endpoint smoke script under scripts/test-voice.sh.
+Done - Script posts multipart wav and pretty-prints JSON response for recognition verification.
+
+6. auth-attendance-admin - Done
+Done - Implemented login/wechat mock, attendance submit+today query, and admin board aggregation APIs.
+Done - Wired SQLite-backed persistence with schema bootstrap and seeded demo accounts.
+
+7. gateway - Done
+Done - Added gateway route fan-out, CORS handling, and JWT authorization guard for protected routes.
+Done - Rebased gateway to port 8010 to avoid system port conflict on 8000.
+
+8. frontend - Done
+Done - Built Vue3+Vite+Vant H5 screens: Login, EmployeeHome with VoiceRecorder, AdminDashboard.
+Done - Applied Professional-style tokens and integrated API calls for full MVP path.
+
+9. e2e-smoke - Done
+Done - Started full local stack and validated login -> voice recognize -> submit -> admin board flow via gateway.
+Done - Confirmed frontend URL and gateway URL are available and runnable in current environment.

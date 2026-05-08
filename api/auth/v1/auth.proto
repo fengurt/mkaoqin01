@@ -1,0 +1,29 @@
+syntax = "proto3";
+package auth.v1;
+
+option go_package = "intervoice/api/auth/v1;authv1";
+
+service AuthService {
+  rpc Login(LoginRequest) returns (LoginReply);
+  rpc WechatLogin(WechatLoginRequest) returns (LoginReply);
+}
+
+message LoginRequest {
+  string account = 1;
+  string password = 2;
+}
+
+message WechatLoginRequest {
+  string code = 1;
+}
+
+message User {
+  int64 id = 1;
+  string role = 2;
+  string display_name = 3;
+}
+
+message LoginReply {
+  string token = 1;
+  User user = 2;
+}

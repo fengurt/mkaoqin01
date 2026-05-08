@@ -1,0 +1,10 @@
+# Project Context
+
+Intervoice MVP implements a Kratos-based microservice backend with a Vue 3 H5 frontend for attendance and work status reporting.
+
+Core MVP path:
+1. Login
+2. Long-press voice input
+3. AI structured extraction
+4. Submit status
+5. Admin board display

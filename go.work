@@ -1,0 +1,9 @@
+go 1.22
+
+use (
+	./app/gateway
+	./app/auth
+	./app/attendance
+	./app/voice
+	./app/admin
+)

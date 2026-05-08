@@ -1,0 +1,93 @@
+services:
+  auth:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        APP_PATH: app/auth
+    environment:
+      AUTH_ADDR: ":8001"
+      DB_PATH: /app/data/intervoice.db
+      JWT_SECRET: ${JWT_SECRET:-intervoice-dev-secret}
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "8001:8001"
+
+  attendance:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        APP_PATH: app/attendance
+    environment:
+      ATTENDANCE_ADDR: ":8002"
+      DB_PATH: /app/data/intervoice.db
+      JWT_SECRET: ${JWT_SECRET:-intervoice-dev-secret}
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "8002:8002"
+
+  voice:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        APP_PATH: app/voice
+    environment:
+      VOICE_ADDR: ":8003"
+      DB_PATH: /app/data/intervoice.db
+      JWT_SECRET: ${JWT_SECRET:-intervoice-dev-secret}
+      ARK_API_KEY: ${ARK_API_KEY:-}
+      ARK_MODEL: ${ARK_MODEL:-doubao-seed-1-6-250615}
+      ARK_ENDPOINT_ID: ${ARK_ENDPOINT_ID:-6030fa1e-eaeb-4664-b330-1d81b08fd526}
+      SPEECH_API_KEY: ${SPEECH_API_KEY:-}
+      SPEECH_APP_ID: ${SPEECH_APP_ID:-}
+      SPEECH_TOKEN: ${SPEECH_TOKEN:-}
+      SPEECH_RESOURCE_ID: ${SPEECH_RESOURCE_ID:-volc.seedasr.auc}
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "8003:8003"
+
+  admin:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        APP_PATH: app/admin
+    environment:
+      ADMIN_ADDR: ":8004"
+      DB_PATH: /app/data/intervoice.db
+      JWT_SECRET: ${JWT_SECRET:-intervoice-dev-secret}
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "8004:8004"
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        APP_PATH: app/gateway
+    depends_on:
+      - auth
+      - attendance
+      - voice
+      - admin
+    environment:
+      GATEWAY_ADDR: ":8010"
+      JWT_SECRET: ${JWT_SECRET:-intervoice-dev-secret}
+    ports:
+      - "8010:8010"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    depends_on:
+      - gateway
+    ports:
+      - "5173:80"

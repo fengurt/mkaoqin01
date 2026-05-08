@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Team Attendance - Day View</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-surface-variant": "#434655",
+                        "tertiary-container": "#bc4800",
+                        "primary": "#004ac6",
+                        "surface-container-low": "#f3f4f5",
+                        "tertiary-fixed-dim": "#ffb596",
+                        "on-surface": "#191c1d",
+                        "on-error-container": "#93000a",
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed": "#ffdbcd",
+                        "error-container": "#ffdad6",
+                        "outline-variant": "#c3c6d7",
+                        "on-tertiary": "#ffffff",
+                        "tertiary": "#943700",
+                        "secondary-container": "#d0e1fb",
+                        "primary-container": "#2563eb",
+                        "on-secondary-fixed-variant": "#38485d",
+                        "on-secondary-container": "#54647a",
+                        "inverse-on-surface": "#f0f1f2",
+                        "secondary": "#505f76",
+                        "primary-fixed": "#dbe1ff",
+                        "secondary-fixed-dim": "#b7c8e1",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "surface-variant": "#e1e3e4",
+                        "outline": "#737686",
+                        "on-primary-fixed": "#00174b",
+                        "error": "#ba1a1a",
+                        "secondary-fixed": "#d3e4fe",
+                        "surface-tint": "#0053db",
+                        "surface-container-high": "#e7e8e9",
+                        "on-error": "#ffffff",
+                        "on-tertiary-fixed-variant": "#7d2d00",
+                        "surface-dim": "#d9dadb",
+                        "surface": "#f8f9fa",
+                        "on-secondary-fixed": "#0b1c30",
+                        "on-background": "#191c1d",
+                        "background": "#f8f9fa",
+                        "surface-bright": "#f8f9fa",
+                        "surface-container-highest": "#e1e3e4",
+                        "surface-container": "#edeeef",
+                        "on-tertiary-fixed": "#360f00",
+                        "on-tertiary-container": "#ffede6",
+                        "on-primary-container": "#eeefff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "inverse-primary": "#b4c5ff",
+                        "inverse-surface": "#2e3132"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sm": "8px",
+                        "2xl": "48px",
+                        "xs": "4px",
+                        "xl": "32px",
+                        "md": "16px",
+                        "container-max": "1280px",
+                        "unit": "8px",
+                        "lg": "24px",
+                        "gutter": "24px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter"],
+                        "display": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "label-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "h1": ["Inter"],
+                        "label-bold": ["Inter"],
+                        "h2": ["Inter"],
+                        "h3": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "display": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "h1": ["30px", {"lineHeight": "38px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "label-bold": ["12px", {"lineHeight": "16px", "fontWeight": "600"}],
+                        "h2": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "h3": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Utilities for scrollbar hiding */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Material symbols specific fill setup for styling keys */
+        .material-symbols-outlined[data-weight="fill"] {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex flex-col pb-2xl md:pb-0">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-surface-dim border-b border-outline-variant dark:border-outline docked full-width top-0 z-50">
+<div class="flex justify-between items-center w-full px-gutter h-16 transition-colors duration-200 ease-in-out">
+<div class="flex items-center gap-md hover:bg-surface-container-low dark:hover:bg-inverse-surface p-sm rounded-lg cursor-pointer">
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant">person</span>
+</div>
+<h1 class="font-h1 text-h1 text-primary dark:text-primary-fixed font-extrabold tracking-tight">Intervoice</h1>
+</div>
+<button class="p-sm rounded-full hover:bg-surface-container-low dark:hover:bg-inverse-surface transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+</button>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="flex-grow flex flex-col px-md md:px-gutter py-lg gap-lg container-max mx-auto w-full">
+<!-- Header & View Toggle -->
+<section class="flex flex-col gap-md">
+<div class="flex justify-between items-end">
+<div>
+<h2 class="font-h2 text-h2 text-on-surface">Team Attendance</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Oct 24, 2023</p>
+</div>
+<!-- Toggle -->
+<div class="flex bg-surface-container-low p-xs rounded-lg border border-outline-variant">
+<button class="px-md py-sm bg-surface rounded shadow-sm font-label-bold text-label-bold text-primary">Day</button>
+<button class="px-md py-sm rounded font-label-bold text-label-bold text-on-surface-variant hover:bg-surface-container transition-colors">Week</button>
+<button class="px-md py-sm rounded font-label-bold text-label-bold text-on-surface-variant hover:bg-surface-container transition-colors">Month</button>
+</div>
+</div>
+</section>
+<!-- Summary Bento Grid -->
+<section class="grid grid-cols-2 md:grid-cols-4 gap-sm md:gap-md">
+<!-- Present -->
+<div class="bg-surface rounded-lg border border-outline-variant p-md flex flex-col gap-sm">
+<div class="flex justify-between items-center">
+<span class="font-label-bold text-label-bold text-on-surface-variant">Present</span>
+<span class="material-symbols-outlined text-[#166534] text-[20px]">check_circle</span>
+</div>
+<div class="font-display text-display text-on-surface">42</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant">84% of team</div>
+</div>
+<!-- Late -->
+<div class="bg-surface rounded-lg border border-outline-variant p-md flex flex-col gap-sm">
+<div class="flex justify-between items-center">
+<span class="font-label-bold text-label-bold text-on-surface-variant">Late</span>
+<span class="material-symbols-outlined text-[#9a3412] text-[20px]">schedule</span>
+</div>
+<div class="font-display text-display text-on-surface">3</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant">Avg 14m delay</div>
+</div>
+<!-- Absent -->
+<div class="bg-surface rounded-lg border border-outline-variant p-md flex flex-col gap-sm">
+<div class="flex justify-between items-center">
+<span class="font-label-bold text-label-bold text-on-surface-variant">Absent</span>
+<span class="material-symbols-outlined text-[#991b1b] text-[20px]">cancel</span>
+</div>
+<div class="font-display text-display text-on-surface">2</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant">Unplanned</div>
+</div>
+<!-- Off-site -->
+<div class="bg-surface rounded-lg border border-outline-variant p-md flex flex-col gap-sm">
+<div class="flex justify-between items-center">
+<span class="font-label-bold text-label-bold text-on-surface-variant">Off-site</span>
+<span class="material-symbols-outlined text-primary text-[20px]">commute</span>
+</div>
+<div class="font-display text-display text-on-surface">3</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant">Approved</div>
+</div>
+</section>
+<!-- Search & Filter -->
+<section class="flex flex-col md:flex-row gap-md w-full">
+<div class="relative flex-grow">
+<span class="material-symbols-outlined absolute left-md top-1/2 transform -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full pl-xl pr-md py-md rounded-lg border border-outline-variant bg-surface focus:border-primary focus:ring focus:ring-primary/10 font-body-md text-body-md text-on-surface outline-none transition-all" placeholder="Search team members..." type="text"/>
+</div>
+<button class="flex items-center justify-center gap-sm px-md py-md bg-surface border border-outline-variant rounded-lg font-label-bold text-label-bold text-on-surface-variant hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined">filter_list</span>
+                Filter Status
+            </button>
+</section>
+<!-- Member List -->
+<section class="flex flex-col bg-surface border border-outline-variant rounded-lg overflow-hidden">
+<!-- List Header (Desktop primarily, visually hidden on small mobile but structured) -->
+<div class="hidden md:grid grid-cols-12 gap-md p-md bg-surface-container-low border-b border-outline-variant font-label-bold text-label-bold text-on-surface-variant">
+<div class="col-span-5">Employee</div>
+<div class="col-span-3">Status</div>
+<div class="col-span-2">Time In</div>
+<div class="col-span-2 text-right">Location</div>
+</div>
+<!-- List Items -->
+<div class="flex flex-col divide-y divide-outline-variant">
+<!-- Item 1 (Present) -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-sm md:gap-md p-md items-center hover:bg-surface-container-lowest transition-colors min-h-[48px]">
+<div class="col-span-1 md:col-span-5 flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center font-label-bold text-label-bold text-on-secondary-container">SJ</div>
+<div>
+<p class="font-h3 text-h3 text-on-surface">Sarah Jenkins</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant md:hidden">08:55 AM • Office</p>
+</div>
+</div>
+<div class="col-span-1 md:col-span-3">
+<span class="inline-flex items-center px-sm py-xs rounded-full bg-[#dcfce7] text-[#166534] font-label-md text-label-md">Present</span>
+</div>
+<div class="hidden md:block col-span-2 font-body-sm text-body-sm text-on-surface">08:55 AM</div>
+<div class="hidden md:block col-span-2 text-right font-body-sm text-body-sm text-on-surface-variant">HQ Office</div>
+</div>
+<!-- Item 2 (Late) -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-sm md:gap-md p-md items-center hover:bg-surface-container-lowest transition-colors min-h-[48px] bg-surface-bright">
+<div class="col-span-1 md:col-span-5 flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center font-label-bold text-label-bold text-on-secondary-container">MR</div>
+<div>
+<p class="font-h3 text-h3 text-on-surface">Michael Ross</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant md:hidden">09:20 AM • Remote</p>
+</div>
+</div>
+<div class="col-span-1 md:col-span-3">
+<span class="inline-flex items-center px-sm py-xs rounded-full bg-[#ffedd5] text-[#9a3412] font-label-md text-label-md">Late (20m)</span>
+</div>
+<div class="hidden md:block col-span-2 font-body-sm text-body-sm text-on-surface">09:20 AM</div>
+<div class="hidden md:block col-span-2 text-right font-body-sm text-body-sm text-on-surface-variant">Remote NY</div>
+</div>
+<!-- Item 3 (Absent) -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-sm md:gap-md p-md items-center hover:bg-surface-container-lowest transition-colors min-h-[48px]">
+<div class="col-span-1 md:col-span-5 flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center font-label-bold text-label-bold text-on-secondary-container">AL</div>
+<div>
+<p class="font-h3 text-h3 text-on-surface">Amanda Liu</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant md:hidden">No Time • --</p>
+</div>
+</div>
+<div class="col-span-1 md:col-span-3">
+<span class="inline-flex items-center px-sm py-xs rounded-full bg-[#fee2e2] text-[#991b1b] font-label-md text-label-md">Absent</span>
+</div>
+<div class="hidden md:block col-span-2 font-body-sm text-body-sm text-on-surface-variant">--</div>
+<div class="hidden md:block col-span-2 text-right font-body-sm text-body-sm text-on-surface-variant">--</div>
+</div>
+<!-- Item 4 (Off-site) -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-sm md:gap-md p-md items-center hover:bg-surface-container-lowest transition-colors min-h-[48px] bg-surface-bright">
+<div class="col-span-1 md:col-span-5 flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center font-label-bold text-label-bold text-on-secondary-container">TC</div>
+<div>
+<p class="font-h3 text-h3 text-on-surface">Tom Chen</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant md:hidden">08:00 AM • Client A</p>
+</div>
+</div>
+<div class="col-span-1 md:col-span-3">
+<span class="inline-flex items-center px-sm py-xs rounded-full bg-primary-fixed text-on-primary-fixed font-label-md text-label-md">Off-site</span>
+</div>
+<div class="hidden md:block col-span-2 font-body-sm text-body-sm text-on-surface">08:00 AM</div>
+<div class="hidden md:block col-span-2 text-right font-body-sm text-body-sm text-on-surface-variant">Client Site</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-16 px-md pb-safe border-t border-outline-variant dark:border-outline bg-surface dark:bg-surface-dim">
+<!-- Dashboard (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:bg-surface-container dark:hover:bg-inverse-surface active:scale-95 transition-transform duration-150 p-xs rounded-lg w-16" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md text-label-md mt-xs">Dashboard</span>
+</a>
+<!-- Voice (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:bg-surface-container dark:hover:bg-inverse-surface active:scale-95 transition-transform duration-150 p-xs rounded-lg w-16" href="#">
+<span class="material-symbols-outlined">mic</span>
+<span class="font-label-md text-label-md mt-xs">Voice</span>
+</a>
+<!-- Team (Active) -->
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed font-bold hover:bg-surface-container dark:hover:bg-inverse-surface active:scale-95 transition-transform duration-150 p-xs rounded-lg w-16" href="#">
+<span class="material-symbols-outlined" data-weight="fill">analytics</span>
+<span class="font-label-md text-label-md mt-xs">Team</span>
+</a>
+<!-- Profile (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:bg-surface-container dark:hover:bg-inverse-surface active:scale-95 transition-transform duration-150 p-xs rounded-lg w-16" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-md text-label-md mt-xs">Profile</span>
+</a>
+</nav>
+</body></html>
