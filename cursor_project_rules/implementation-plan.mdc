@@ -35,3 +35,11 @@ Done - Applied Professional-style tokens and integrated API calls for full MVP p
 9. e2e-smoke - Done
 Done - Started full local stack and validated login -> voice recognize -> submit -> admin board flow via gateway.
 Done - Confirmed frontend URL and gateway URL are available and runnable in current environment.
+
+10. home-work-report - Done
+Done - HomePage.vue: two hero cards (工作申报 / 一键打卡下班), van-popup form with calendar/tags/submit, CHECK_OUT in modal after save.
+Done - Gating via hasReportedToday + showConfirmDialog「去申报」; submitStatus + loadRecords; npm run build verified.
+
+11. home-work-report-multi - Done
+Done - Work report modal: multiple lines via「新增一条」, compact textarea per line, per-line tag; confirm dialog before submit on main itinerary coverage.
+Done - Submit loops submitStatus with bumped occurredAt seconds; build verified.
