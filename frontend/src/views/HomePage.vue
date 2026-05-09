@@ -322,16 +322,16 @@ const fortuneLine = computed(() => {
 })
 
 const FORTUNE_IMAGE_FILES = [
-  '/@fs/Users/af/.cursor/projects/Users-af-cpro01-prioritized01-goms-intervoice01/assets/___01-_____Medium-4ade1249-5ee2-4aa0-9ba4-3af93ea68817.png',
-  '/@fs/Users/af/.cursor/projects/Users-af-cpro01-prioritized01-goms-intervoice01/assets/___02-_____Medium-42139af7-913e-4f1b-a43b-6bf513e2cab3.png',
-  '/@fs/Users/af/.cursor/projects/Users-af-cpro01-prioritized01-goms-intervoice01/assets/___03-_____Medium-5a78044d-409a-44f7-914b-edab5b4ee6b4.png',
-  '/@fs/Users/af/.cursor/projects/Users-af-cpro01-prioritized01-goms-intervoice01/assets/___04-_____Medium-340c1d61-0cd5-49a2-a239-94130f251357.png',
-  '/@fs/Users/af/.cursor/projects/Users-af-cpro01-prioritized01-goms-intervoice01/assets/___05-______Medium-2918e36a-1bf9-4ba4-bcbe-609d7e127020.png',
-  '/@fs/Users/af/.cursor/projects/Users-af-cpro01-prioritized01-goms-intervoice01/assets/___06-_____Medium-a7e33781-73b4-493c-91b1-97632ebcf47c.png',
-  '/@fs/Users/af/.cursor/projects/Users-af-cpro01-prioritized01-goms-intervoice01/assets/___07-_____Medium-275f5415-8209-43d1-bce4-f172667bc1c8.png',
-  '/@fs/Users/af/.cursor/projects/Users-af-cpro01-prioritized01-goms-intervoice01/assets/___08-_____Medium-c737a7d6-13ef-4c13-b864-4bfc1e9a786d.png',
-  '/@fs/Users/af/.cursor/projects/Users-af-cpro01-prioritized01-goms-intervoice01/assets/___09-_____Medium-860fbd8b-73b5-4fa6-acbf-5e06eeea4b0f.png',
-  '/@fs/Users/af/.cursor/projects/Users-af-cpro01-prioritized01-goms-intervoice01/assets/___10-_____Medium-0f6b40c7-c5c0-4d26-b70e-96da90763da0.png',
+  '/fortune/___01-_____Medium-4ade1249-5ee2-4aa0-9ba4-3af93ea68817.png',
+  '/fortune/___02-_____Medium-42139af7-913e-4f1b-a43b-6bf513e2cab3.png',
+  '/fortune/___03-_____Medium-5a78044d-409a-44f7-914b-edab5b4ee6b4.png',
+  '/fortune/___04-_____Medium-340c1d61-0cd5-49a2-a239-94130f251357.png',
+  '/fortune/___05-______Medium-2918e36a-1bf9-4ba4-bcbe-609d7e127020.png',
+  '/fortune/___06-_____Medium-a7e33781-73b4-493c-91b1-97632ebcf47c.png',
+  '/fortune/___07-_____Medium-275f5415-8209-43d1-bce4-f172667bc1c8.png',
+  '/fortune/___08-_____Medium-c737a7d6-13ef-4c13-b864-4bfc1e9a786d.png',
+  '/fortune/___09-_____Medium-860fbd8b-73b5-4fa6-acbf-5e06eeea4b0f.png',
+  '/fortune/___10-_____Medium-0f6b40c7-c5c0-4d26-b70e-96da90763da0.png',
 ]
 
 const pickRandomFortuneImage = () => {
