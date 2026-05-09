@@ -28,20 +28,25 @@
       </div>
     </main>
 
-    <AppBottomNav current="me" />
+    <AppBottomNav />
   </div>
 </template>
 
 <script setup>
 import { onMounted, ref } from 'vue'
+import { showFailToast } from 'vant'
 import AppBottomNav from '../../components/AppBottomNav.vue'
 import { getAdminReport } from '../../api'
 
 const report = ref({ lateCount: 0, earlyLeaveCount: 0, riskAlerts: 0, totalHours: 0 })
 
 onMounted(async () => {
-  const response = await getAdminReport()
-  report.value = response.data || report.value
+  try {
+    const response = await getAdminReport()
+    report.value = response.data || report.value
+  } catch (error) {
+    showFailToast(error?.response?.data?.error || '报告加载失败')
+  }
 })
 </script>
 
@@ -50,7 +55,7 @@ onMounted(async () => {
 .st-topbar { height: 64px; padding: 0 16px; background:#fff; border-bottom: 1px solid #c3c6d7; display:flex; align-items:center; justify-content:space-between; }
 .st-brand { margin: 0; color:#004ac6; font-size:30px; }
 .st-icon-btn { width:40px; height:40px; border:0; background:transparent; color:#004ac6; border-radius:999px; }
-.st-content { padding: 24px 16px; display:flex; flex-direction:column; gap:16px; }
+.st-content { padding: 24px 16px var(--app-nav-clearance); display:flex; flex-direction:column; gap:16px; }
 .st-title { margin:0; font-size:30px; color:#191c1d; }
 .st-sub { margin:0; color:#434655; }
 .st-card-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }

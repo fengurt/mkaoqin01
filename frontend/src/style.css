@@ -1,21 +1,58 @@
 :root {
-  --brand-bg: #f1f5f9;
+  --app-nav-clearance: calc(80px + env(safe-area-inset-bottom, 0px));
+
+  /* 全局品牌色 — 深蓝专业基调 + 克制点缀 */
+  --brand-bg: #f0f4fb;
+  --brand-surface: #e8edf6;
   --brand-card: #ffffff;
-  --brand-primary: #1d4ed8;
+  --brand-primary: #1e3a8a;
+  --brand-primary-mid: #2563eb;
   --brand-primary-soft: #dbeafe;
   --brand-title: #0f172a;
   --brand-text: #334155;
-  --brand-border: #e2e8f0;
+  --brand-border: #cbd5e1;
   --brand-subtext: #64748b;
   --brand-success: #047857;
+  --brand-danger: #b91c1c;
+  --brand-warning: #c2410c;
+
+  /* 首页磁贴（与品牌协调） */
+  --metro-header-bg: #0f172a;
+  --metro-header-text: #f8fafc;
+  --metro-tile-in: #b45309;
+  --metro-tile-out: #0d9488;
+  --metro-tile-report: #1e40af;
+  --metro-tile-luck: #5b21b6;
+  --metro-pivot-bg: #f8fafc;
+  --metro-chip-bg: #0f172a;
+
+  /* Vant 组件联动（见 https://vant-ui.github.io/vant/ 主题变量） */
+  --van-primary-color: var(--brand-primary-mid);
+  --van-success-color: var(--brand-success);
+  --van-danger-color: var(--brand-danger);
+  --van-warning-color: var(--brand-warning);
+  --van-text-color: var(--brand-text);
+  --van-active-color: var(--brand-surface);
+  --van-background: var(--brand-bg);
+  --van-background-2: var(--brand-card);
+  --van-cell-border-color: var(--brand-border);
+  --van-button-primary-background: var(--brand-primary-mid);
+  --van-button-primary-border-color: var(--brand-primary-mid);
 }
 
 * { box-sizing: border-box; }
+html {
+  -webkit-text-size-adjust: 100%;
+}
 body {
   margin: 0;
   font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
   background: var(--brand-bg);
   color: var(--brand-text);
+  -webkit-tap-highlight-color: transparent;
+}
+#app {
+  min-height: 100dvh;
 }
 
 .material-symbols-outlined {
@@ -25,7 +62,7 @@ body {
 
 .page {
   min-height: 100vh;
-  padding: 14px 14px 90px;
+  padding: 14px 14px var(--app-nav-clearance);
 }
 
 .card {

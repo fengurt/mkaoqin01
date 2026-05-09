@@ -1,6 +1,7 @@
 go 1.22
 
 use (
+	./app/dbschema
 	./app/gateway
 	./app/auth
 	./app/attendance

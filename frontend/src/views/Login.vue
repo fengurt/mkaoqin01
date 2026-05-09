@@ -22,11 +22,17 @@
           <input id="password" v-model="password" class="st-login-input" type="password" placeholder="请输入密码" />
         </div>
 
-        <button class="st-login-btn-primary" type="submit">
+        <van-button
+          block
+          round
+          type="primary"
+          native-type="submit"
+          class="st-login-submit"
+          :loading="loggingIn"
+          loading-text="登录中..."
+        >
           登录
-          <span class="material-symbols-outlined st-login-btn-icon">arrow_forward</span>
-        </button>
-
+        </van-button>
       </form>
 
     </main>
@@ -42,6 +48,7 @@ import { login } from '../api'
 const router = useRouter()
 const account = ref('132369')
 const password = ref('123456a')
+const loggingIn = ref(false)
 
 const routeByRole = (role) => {
   void role
@@ -54,23 +61,26 @@ const storeSession = (data) => {
 }
 
 const handleLogin = async () => {
+  loggingIn.value = true
   try {
     const response = await login({ account: account.value, password: password.value })
     storeSession(response.data)
     routeByRole(response.data.user.role)
   } catch {
     showToast('登录失败，请检查账号密码')
+  } finally {
+    loggingIn.value = false
   }
 }
 </script>
 
 <style scoped>
 .st-page-login {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fff;
+  background: linear-gradient(165deg, #f8fafc 0%, #eff6ff 42%, #ffffff 100%);
   padding: 24px;
 }
 
@@ -116,19 +126,11 @@ const handleLogin = async () => {
   font-size: 16px;
 }
 
-.st-login-btn-primary {
+.st-login-submit {
+  margin-top: 8px;
   height: 48px;
-  border-radius: 8px;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
 }
-
-.st-login-btn-primary { background: #2563eb; color: #fff; }
-.st-login-btn-icon { font-size: 20px; }
 
 </style>

@@ -37,10 +37,31 @@ func main() {
 	hsrv.HandleFunc("/v1/attendance/summary", withCORS(proxyGET(attendanceBaseURL+"/v1/attendance/summary", true)))
 	hsrv.HandleFunc("/v1/attendance/list", withCORS(proxyGET(attendanceBaseURL+"/v1/attendance/list", true)))
 	hsrv.HandleFunc("/v1/attendance/by-date", withCORS(proxyGET(attendanceBaseURL+"/v1/attendance/by-date", true)))
+	hsrv.HandleFunc("/v1/catalog/locations", withCORS(proxyGET(attendanceBaseURL+"/v1/catalog/locations", true)))
+	hsrv.HandleFunc("/v1/catalog/schedule-quick", withCORS(proxyGET(attendanceBaseURL+"/v1/catalog/schedule-quick", false)))
+	// Catalog-only lists (shift_types / activity_types); same data as admin UI. Saving still requires JWT via POST /v1/schedule/day.
+	hsrv.HandleFunc("/v1/schedule/day-options", withCORS(proxyGET(attendanceBaseURL+"/v1/schedule/day-options", false)))
+	hsrv.HandleFunc("/v1/schedule/day", withCORS(proxyScheduleDay(attendanceBaseURL)))
 	hsrv.HandleFunc("/v1/admin/board", withCORS(proxyGET(adminBaseURL+"/v1/admin/board", true)))
 	hsrv.HandleFunc("/v1/admin/summary", withCORS(proxyGET(adminBaseURL+"/v1/admin/summary", true)))
 	hsrv.HandleFunc("/v1/admin/report", withCORS(proxyGET(adminBaseURL+"/v1/admin/report", true)))
 	hsrv.HandleFunc("/v1/admin/team", withCORS(proxyGET(adminBaseURL+"/v1/admin/team", true)))
+	hsrv.HandleFunc("/v1/admin/data/meta", withCORS(proxyGET(adminBaseURL+"/v1/admin/data/meta", true)))
+	hsrv.HandleFunc("/v1/admin/data/schema", withCORS(proxyGET(adminBaseURL+"/v1/admin/data/schema", true)))
+	hsrv.HandleFunc("/v1/admin/data/users", withCORS(proxyGET(adminBaseURL+"/v1/admin/data/users", true)))
+	hsrv.HandleFunc("/v1/admin/data/attendance", withCORS(proxyGET(adminBaseURL+"/v1/admin/data/attendance", true)))
+	hsrv.HandleFunc("/v1/admin/data/attendance/upsert", withCORS(proxyJSON(adminBaseURL+"/v1/admin/data/attendance/upsert", true)))
+	hsrv.HandleFunc("/v1/admin/data/users/patch", withCORS(proxyJSON(adminBaseURL+"/v1/admin/data/users/patch", true)))
+	hsrv.HandleFunc("/v1/admin/data/location-catalog", withCORS(proxyGET(adminBaseURL+"/v1/admin/data/location-catalog", true)))
+	hsrv.HandleFunc("/v1/admin/data/location-catalog/upsert", withCORS(proxyJSON(adminBaseURL+"/v1/admin/data/location-catalog/upsert", true)))
+	hsrv.HandleFunc("/v1/admin/data/location-catalog/delete", withCORS(proxyJSON(adminBaseURL+"/v1/admin/data/location-catalog/delete", true)))
+	hsrv.HandleFunc("/v1/admin/data/schedule-quick-sections", withCORS(proxyGET(adminBaseURL+"/v1/admin/data/schedule-quick-sections", true)))
+	hsrv.HandleFunc("/v1/admin/data/schedule-quick-sections/upsert", withCORS(proxyJSON(adminBaseURL+"/v1/admin/data/schedule-quick-sections/upsert", true)))
+	hsrv.HandleFunc("/v1/admin/data/schedule-quick-sections/delete", withCORS(proxyJSON(adminBaseURL+"/v1/admin/data/schedule-quick-sections/delete", true)))
+	hsrv.HandleFunc("/v1/admin/data/activity-types", withCORS(proxyGET(adminBaseURL+"/v1/admin/data/activity-types", true)))
+	hsrv.HandleFunc("/v1/admin/data/activity-types/upsert", withCORS(proxyJSON(adminBaseURL+"/v1/admin/data/activity-types/upsert", true)))
+	hsrv.HandleFunc("/v1/admin/data/shift-types", withCORS(proxyGET(adminBaseURL+"/v1/admin/data/shift-types", true)))
+	hsrv.HandleFunc("/v1/admin/data/shift-types/upsert", withCORS(proxyJSON(adminBaseURL+"/v1/admin/data/shift-types/upsert", true)))
 	hsrv.HandleFunc("/healthz", withCORS(func(writer http.ResponseWriter, request *http.Request) {
 		writeJSON(writer, http.StatusOK, map[string]string{"service": "gateway-svc", "status": "ok"})
 	}))
@@ -64,6 +85,33 @@ func proxyJSON(targetURL string, authRequired bool) http.HandlerFunc {
 			targetRequest.Header.Set("Authorization", request.Header.Get("Authorization"))
 		}
 		proxyRequest(writer, targetRequest)
+	}
+}
+
+func proxyScheduleDay(baseURL string) http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		if !validateJWT(request) {
+			writeJSON(writer, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+			return
+		}
+		target := baseURL + "/v1/schedule/day"
+		switch request.Method {
+		case http.MethodGet:
+			if request.URL.RawQuery != "" {
+				target = target + "?" + request.URL.RawQuery
+			}
+			targetRequest, _ := http.NewRequest(http.MethodGet, target, nil)
+			targetRequest.Header.Set("Authorization", request.Header.Get("Authorization"))
+			proxyRequest(writer, targetRequest)
+		case http.MethodPost:
+			bodyBytes, _ := io.ReadAll(request.Body)
+			targetRequest, _ := http.NewRequest(http.MethodPost, target, bytes.NewReader(bodyBytes))
+			targetRequest.Header.Set("Content-Type", "application/json")
+			targetRequest.Header.Set("Authorization", request.Header.Get("Authorization"))
+			proxyRequest(writer, targetRequest)
+		default:
+			writeJSON(writer, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		}
 	}
 }
 

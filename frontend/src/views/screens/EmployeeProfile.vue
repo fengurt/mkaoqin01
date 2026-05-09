@@ -23,12 +23,13 @@
       </div>
     </main>
 
-    <AppBottomNav current="me" />
+    <AppBottomNav />
   </div>
 </template>
 
 <script setup>
 import { onMounted, ref } from 'vue'
+import { showFailToast } from 'vant'
 import AppBottomNav from '../../components/AppBottomNav.vue'
 import { getAttendanceSummary } from '../../api'
 
@@ -36,8 +37,12 @@ const user = JSON.parse(localStorage.getItem('user') || '{"id":1,"displayName":"
 const summary = ref({ totalRecords: 0, outingCount: 0, diningCount: 0, overtimeHours: 0 })
 
 onMounted(async () => {
-  const response = await getAttendanceSummary(user.id || 1, 'month')
-  summary.value = response.data || summary.value
+  try {
+    const response = await getAttendanceSummary(user.id || 1, 'month')
+    summary.value = response.data || summary.value
+  } catch (error) {
+    showFailToast(error?.response?.data?.error || '摘要加载失败')
+  }
 })
 </script>
 
@@ -46,7 +51,7 @@ onMounted(async () => {
 .st-topbar { height:64px; padding:0 16px; background:#fff; border-bottom:1px solid #c3c6d7; display:flex; align-items:center; justify-content:space-between; }
 .st-brand { margin:0; color:#004ac6; font-size:30px; }
 .st-icon-btn { width:40px; height:40px; border:0; background:transparent; color:#004ac6; border-radius:999px; }
-.st-content { padding:24px 16px 90px; display:flex; flex-direction:column; gap:16px; }
+.st-content { padding:24px 16px var(--app-nav-clearance); display:flex; flex-direction:column; gap:16px; }
 .st-profile-card { background:#fff; border:1px solid #c3c6d7; border-radius:8px; padding:16px; display:flex; align-items:center; gap:12px; }
 .st-profile-card h2 { margin:0; color:#191c1d; }
 .st-profile-card p { margin:4px 0 0; color:#434655; font-size:13px; }

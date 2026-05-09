@@ -5,7 +5,10 @@ go 1.22
 require (
 	github.com/go-kratos/kratos/v2 v2.8.3
 	github.com/mattn/go-sqlite3 v1.14.22
+	intervoice/dbschema v0.0.0
 )
+
+replace intervoice/dbschema => ../dbschema
 
 require (
 	github.com/go-kratos/aegis v0.2.0 // indirect

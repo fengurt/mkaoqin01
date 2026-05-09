@@ -32,7 +32,7 @@
         <div class="kpi-grid">
           <div class="kpi-item"><span>记录总数</span><strong>{{ summary.totalRecords || 0 }}</strong></div>
           <div class="kpi-item"><span>外出次数</span><strong>{{ summary.outingCount || 0 }}</strong></div>
-          <div class="kpi-item"><span>在岗天数</span><strong>{{ summary.officeDays || 0 }}</strong></div>
+          <div class="kpi-item"><span>在岗天数</span><strong>{{ derivedOfficeDays }}</strong></div>
           <div class="kpi-item"><span>总工时</span><strong>{{ summary.totalHours || 0 }}</strong></div>
         </div>
       </section>
@@ -55,6 +55,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import { showFailToast } from 'vant'
 import { getAttendanceList, getAttendanceSummary } from '../../api'
 import { formatDateTime, normalizeAttendanceRecord } from '../../data/models'
 
@@ -70,6 +71,16 @@ const periodOptions = [
   { value: 'week', label: '周' },
   { value: 'month', label: '月' },
 ]
+
+const derivedOfficeDays = computed(() => {
+  const days = new Set()
+  records.value.forEach((row) => {
+    if (row.status === 'OFFICE' && row.occurredAt) {
+      days.add(String(row.occurredAt).slice(0, 10))
+    }
+  })
+  return days.size
+})
 
 const periodRangeLabel = computed(() => {
   const today = new Date()
@@ -88,12 +99,18 @@ const periodRangeLabel = computed(() => {
 
 const loadData = async () => {
   if (!memberId.value) return
-  const [recordsResponse, summaryResponse] = await Promise.all([
-    getAttendanceList(memberId.value, selectedPeriod.value),
-    getAttendanceSummary(memberId.value, selectedPeriod.value),
-  ])
-  records.value = (recordsResponse.data.items || []).map(normalizeAttendanceRecord)
-  summary.value = summaryResponse.data || summary.value
+  try {
+    const [recordsResponse, summaryResponse] = await Promise.all([
+      getAttendanceList(memberId.value, selectedPeriod.value),
+      getAttendanceSummary(memberId.value, selectedPeriod.value),
+    ])
+    const listPayload = recordsResponse.data || {}
+    records.value = (listPayload.records || listPayload.items || []).map(normalizeAttendanceRecord)
+    summary.value = summaryResponse.data || summary.value
+  } catch (error) {
+    records.value = []
+    showFailToast(error?.response?.data?.error || '加载考勤数据失败')
+  }
 }
 
 const changePeriod = async (period) => {

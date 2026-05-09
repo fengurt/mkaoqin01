@@ -15,7 +15,10 @@
           <span class="meta">{{ users.length }} 个账号</span>
         </div>
         <van-field v-model="keyword" placeholder="搜索账号或昵称" clearable />
-        <div v-if="loadUsersFailed" class="error">账号列表加载失败，请重新登录后再试</div>
+        <div v-if="loadUsersFailed" class="error-block">
+          <p class="error">{{ loadUsersErrorMessage }}</p>
+          <van-button size="small" type="primary" plain @click="loadUsers">重试</van-button>
+        </div>
         <div v-else-if="filteredUsers.length === 0" class="empty">暂无匹配账号</div>
         <div v-else class="list-wrap">
           <div v-for="item in filteredUsers" :key="item.id" class="user-row">
@@ -48,6 +51,7 @@ import { getAuthUsers, resetUserPassword } from '../../api'
 const users = ref([])
 const keyword = ref('')
 const loadUsersFailed = ref(false)
+const loadUsersErrorMessage = ref('')
 const showResetPassword = ref(false)
 const resetTarget = ref({ id: 0, account: '', displayName: '' })
 const resetPasswordValue = ref('')
@@ -62,14 +66,35 @@ const filteredUsers = computed(() => {
   })
 })
 
+const resolveUsersPayload = (payload) => {
+  if (!payload || typeof payload !== 'object') return []
+  const raw = payload.items ?? payload.users ?? payload.data
+  return Array.isArray(raw) ? raw : []
+}
+
 const loadUsers = async () => {
+  loadUsersFailed.value = false
+  loadUsersErrorMessage.value = ''
   try {
     const response = await getAuthUsers()
-    users.value = response.data.items || []
+    users.value = resolveUsersPayload(response.data)
     loadUsersFailed.value = false
-  } catch {
+  } catch (error) {
     loadUsersFailed.value = true
     users.value = []
+    const status = error?.response?.status
+    const serverMsg = error?.response?.data?.error
+    if (status === 401) {
+      loadUsersErrorMessage.value = serverMsg || '登录已失效，请重新登录后再试'
+    } else if (status === 403) {
+      loadUsersErrorMessage.value = serverMsg || '当前账号无管理员权限，无法查看账号列表'
+    } else if (status === 502 || status === 503) {
+      loadUsersErrorMessage.value = serverMsg || '服务暂时不可用，请稍后重试'
+    } else if (error?.code === 'ERR_NETWORK') {
+      loadUsersErrorMessage.value = '无法连接服务器，请确认网络或与站点同域的 API 地址配置（勿使用 localhost 访问线上页面）'
+    } else {
+      loadUsersErrorMessage.value = serverMsg || error?.message || '账号列表加载失败，请重试'
+    }
   }
 }
 
@@ -106,7 +131,8 @@ onMounted(loadUsers)
 .head-row { display: flex; align-items: center; justify-content: space-between; }
 .head-row h3 { margin: 0; font-size: 15px; color: #102a5c; }
 .meta { font-size: 12px; color: #64748b; }
-.error { color: #dc2626; font-size: 13px; }
+.error-block { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.error { color: #dc2626; font-size: 13px; margin: 0; }
 .empty { color: #64748b; font-size: 13px; }
 .list-wrap { display: flex; flex-direction: column; gap: 8px; }
 .user-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; border: 1px solid #eef2f7; border-radius: 10px; padding: 10px; }

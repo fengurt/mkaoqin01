@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "intervoice-admin-data": {
+      "command": "node",
+      "args": ["REPLACE_WITH_ABSOLUTE_PATH_TO_REPO/scripts/mcp-intervoice-admin/server.mjs"],
+      "env": {
+        "INTERVOICE_GATEWAY_URL": "http://127.0.0.1:8010",
+        "INTERVOICE_ADMIN_TOKEN": "REPLACE_WITH_ADMIN_JWT_FROM_LOGIN"
+      }
+    }
+  }
+}

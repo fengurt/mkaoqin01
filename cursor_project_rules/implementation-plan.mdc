@@ -10,7 +10,7 @@ Done - Wired dedicated service names and ports for gateway/auth/attendance/voice
 
 3. proto-sqlite - Done
 Done - Added API protobuf contracts for auth, attendance, voice, and admin service boundaries.
-Done - Created SQLite schema and seed users (staff01/admin01) in data/schema.sql.
+Done - SQLite DDL + seeds live in app/dbschema/bootstrap.sql; data/schema.sql points there (see data/DATA_SYNC.md).
 
 4. voice-svc - Done
 Done - Implemented /v1/voice/recognize with multipart audio handling and structured JSON response.
@@ -43,3 +43,55 @@ Done - Gating via hasReportedToday + showConfirmDialog「去申报」; submitSta
 11. home-work-report-multi - Done
 Done - Work report modal: multiple lines via「新增一条」, compact textarea per line, per-line tag; confirm dialog before submit on main itinerary coverage.
 Done - Submit loops submitStatus with bumped occurredAt seconds; build verified.
+
+12. api-base-admin-users - Done
+Done - Frontend axios base URL defaults to same-origin (empty) so nginx `/v1` proxy works in prod; Vite dev proxies `/v1` to gateway; optional `VITE_API_BASE_URL`.
+Done - Auth JWT `sub` parsing accepts float64/string/json.Number; admin account list errors distinguish 401/403/network + retry.
+
+13. flows-audit - Done
+Done - Fixed TeamMemberHistoryView list key (`records` not `items`); derived 在岗天数 from timeline; try/catch + toasts on Team/Home/Schedule/MyAttendance/Report/Profile; MyAttendance reload on period change.
+Done - Attendance submit validates allowed status set server-side; builds verified.
+
+14. ux-nav-loading - Done
+Done - AppBottomNav derives active tab from route (`/my-attendance` → 行程); safe-area + blur bar; `--app-nav-clearance` for content padding; router scroll to top; login loading + Home submit/clock-out loading.
+Done - Login gradient + dvh; DetailedAttendanceReport bottom clearance; zh-CN document title.
+
+15. schedule-page-compact-ssot - Done
+Done - SchedulePage: merged「当日上班时间」into timeline header beside actions; summary as compact chips; tighter spacing; removed localStorage schedule events.
+Done - Timeline labels + save path use only `attendance_records` via submitStatus(OFFICE)+getAttendanceByDate; slot text maps `occurredAt` to 30m buckets; `npm run build` OK.
+
+16. db-single-schema-sync-prep - Done
+Done - Added intervoice/dbschema with embedded bootstrap.sql (sync_uid, updated_at, FK on attendance, seed_markers); auth/attendance/admin call ApplySQLite + WAL/foreign_keys/busy_timeout DSN; MigrateSQLiteLegacy for older DB files.
+Done - postgresql.sql mirror + data/DATA_SYNC.md (single writer vs true 2-way, replication checklist); data/schema.sql reduced to pointers only.
+
+17. admin-data-api-mcp - Done
+Done - Admin-only JWT routes /v1/admin/data/meta|schema|users|attendance + POST attendance/upsert + users/patch; 1MiB body cap, optimistic ifMatchUpdatedAt, admin_data_audit; gateway proxies all.
+Done - scripts/mcp-intervoice-admin (MCP stdio + Zod tools); cursor-mcp-config.example.json; DATA_SYNC.md admin+MCP section; admin+gateway go build OK.
+
+18. sqlite-migrate-legacy-fix - Done
+Done - MigrateSQLiteLegacy: avoid ALTER ADD with non-constant default (SQLite error on older DB); nullable columns + backfill updated_at + partial UNIQUE indexes on sync_uid.
+Done - dev-up smoke: employee/admin login, bottom nav, team guard, work申报→submit→today API record OK.
+
+19. e2e-flow-smoke - Done
+Done - Browser MCP + curl: /healthz, auth login, employee paths /home /schedule /me /my-attendance/day, non-admin blocked from /team-attendance, admin team view loads.
+Done - Work declaration modal saves OFFICE row for admin userId=900001; clock-out card text updates after申报.
+
+20. mgm-location-catalog-ui - Done
+Done - Embedded `location_catalog.sql`, `ApplySQLite` + `GET /v1/catalog/locations` (attendance) + gateway proxy; HomePage two office presets + dining picker with intro popup; SchedulePage matching quick presets + `CatalogIntroPopup`; PostgreSQL DDL mirror for `location_catalog`.
+Done - `npm run build` and Go build for attendance/gateway/dbschema verified.
+
+21. schedule-quick-admin-config - Done
+Done - `schedule_quick_section` SQL + seeds; `GET /v1/catalog/schedule-quick` (gateway 免登录); Schedule modal driven by grouped catalog only (no hotel intro buttons); admin CRUD `/v1/admin/data/location-catalog*` + `schedule-quick-sections*` + `AdminScheduleQuickConfigView.vue` (`/me/schedule-quick-config`); `schedule_chip` seeded for 客户拜访/会议/文档整理。
+Done - `npm run build` + Go admin/attendance/gateway build verified。
+
+22. admin-routes-restart-doc-metro-home - Done
+Done - 404 root cause: stale `admin`/`gateway` process without new routes; fixed by `dev-down`/`dev-up`; `dev-up.sh` + README reminder; admin config page 404 toast text; HomePage Metro tiles: 一键打卡上班、快捷申报、一键快乐下班、今日好运 + horizontal 「实况」 cards。
+Done - `npm run build` OK。
+
+23. zh-admin-quick-theme-global - Done
+Done - `style.css` expanded tokens + `--van-*` linkage; Home metro + bottom nav use tokens; 行程快捷配置：中文主导、ActionSheet 中文主标题、区域中文映射、一级分组下二级预览芯片（全量目录快照）；`getAdminLocationCatalog()` 无参拉全表。
+Done - `npm run build` OK。
+
+24. schedule-shift-ux-dev-up-admin - Done
+Done - `scripts/dev-up.sh`: list ports、仅清理本仓库占用进程、占用仍存则退出、`curl` 等待 gateway `/healthz`；行程时间轴右侧药丸展示 `常规班-{名称} {时段}`；`DailySchedulePicker` 改为常规班/休假两段下拉（Picker）；`GET` pillText 与休假前缀文案对齐；管理员页 `/me/schedule-types-config` 维护 `shift_types`/`activity_types`；`npm run build` + `go build` attendance OK。
+Done - 数据库仍由 `dbschema` 引导；OFFICE 与迁移逻辑不变。
