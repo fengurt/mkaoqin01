@@ -27,6 +27,8 @@
         <h3>账号与安全</h3>
         <van-cell title="账号安全设置" is-link @click="$router.push('/me/security')" />
         <van-cell v-if="isAdmin" title="账号管理（管理员）" is-link @click="$router.push('/me/accounts')" />
+        <van-cell v-if="isAdmin" title="行程快捷配置（管理员）" is-link @click="$router.push('/me/schedule-quick-config')" />
+        <van-cell v-if="isAdmin" title="班次与假期（管理员）" is-link @click="$router.push('/me/schedule-types-config')" />
       </section>
 
       <section v-if="isAdmin" class="team-spotlight" @click="$router.push('/team-attendance/day')">
@@ -39,7 +41,7 @@
       </section>
     </main>
 
-    <AppBottomNav current="me" />
+    <AppBottomNav />
   </div>
 </template>
 
@@ -52,11 +54,16 @@ const isAdmin = computed(() => user.role === 'admin')
 </script>
 
 <style scoped>
-.page-shell { min-height:100vh; background:#f8f9fa; }
-.topbar { height:64px; border-bottom:1px solid #c3c6d7; background:#fff; display:flex; align-items:center; justify-content:space-between; padding:0 16px; }
-.topbar h1 { margin:0; font-size:22px; }
-.content { padding:16px 16px 84px; display:flex; flex-direction:column; gap:10px; }
-.card { background:#fff; border:1px solid #c3c6d7; border-radius:10px; }
+.page-shell { min-height:100vh; background: var(--brand-bg, #f1f5f9); }
+.topbar { height:64px; border-bottom:1px solid var(--brand-border, #e2e8f0); background:#fff; display:flex; align-items:center; justify-content:space-between; padding:0 16px; }
+.topbar h1 { margin:0; font-size:22px; color: var(--brand-title, #0f172a); }
+.content { padding:16px 16px var(--app-nav-clearance); display:flex; flex-direction:column; gap:12px; }
+.card {
+  background: var(--brand-card, #fff);
+  border: 1px solid var(--brand-border, #e2e8f0);
+  border-radius: 12px;
+  box-shadow: 0 8px 18px rgba(15, 40, 120, 0.05);
+}
 .card h3 { margin:0; padding:12px 12px 0; font-size:15px; }
 .profile { display:flex; align-items:center; gap:12px; padding:12px; }
 .profile h2 { margin:0; font-size:18px; }

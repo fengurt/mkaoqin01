@@ -48,12 +48,13 @@
       </section>
     </main>
 
-    <AppBottomNav current="schedule" />
+    <AppBottomNav />
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { showFailToast } from 'vant'
 import AppBottomNav from '../../components/AppBottomNav.vue'
 import { getAttendanceList, getAttendanceSummary } from '../../api'
 import { normalizeAttendanceRecord, PERIOD_OPTIONS, formatDateTime } from '../../data/models'
@@ -65,15 +66,24 @@ const summary = ref({ totalRecords: 0, outingCount: 0, diningCount: 0, overtimeH
 const periodLabel = computed(() => PERIOD_OPTIONS.find((item) => item.key === props.period)?.label || props.period)
 
 const loadData = async () => {
-  const [listResponse, summaryResponse] = await Promise.all([
-    getAttendanceList(user.id, props.period),
-    getAttendanceSummary(user.id, props.period),
-  ])
-  records.value = (listResponse.data.records || []).map(normalizeAttendanceRecord)
-  summary.value = summaryResponse.data || summary.value
+  try {
+    const [listResponse, summaryResponse] = await Promise.all([
+      getAttendanceList(user.id, props.period),
+      getAttendanceSummary(user.id, props.period),
+    ])
+    const listPayload = listResponse.data || {}
+    records.value = (listPayload.records || listPayload.items || []).map(normalizeAttendanceRecord)
+    summary.value = summaryResponse.data || summary.value
+  } catch (error) {
+    records.value = []
+    showFailToast(error?.response?.data?.error || '考勤数据加载失败')
+  }
 }
 
 onMounted(loadData)
+watch(() => props.period, () => {
+  void loadData()
+})
 </script>
 
 <style scoped>
@@ -83,7 +93,7 @@ onMounted(loadData)
 .st-avatar-wrap { width: 32px; height: 32px; border: 1px solid #c3c6d7; border-radius: 999px; display:flex; align-items:center; justify-content:center; color:#434655; }
 .st-brand { margin: 0; color: #004ac6; font-size: 30px; line-height: 38px; }
 .st-icon-btn { width:40px; height:40px; border:0; background:transparent; color:#004ac6; border-radius:999px; }
-.st-content { padding: 24px 16px 90px; display: flex; flex-direction: column; gap: 16px; }
+.st-content { padding: 24px 16px var(--app-nav-clearance); display: flex; flex-direction: column; gap: 16px; }
 .st-title { margin: 0; font-size: 30px; }
 .st-sub { margin: 6px 0 0; color: #434655; }
 .st-chip-row { display: flex; gap: 8px; }

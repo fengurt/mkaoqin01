@@ -68,6 +68,9 @@
           >
             <span>{{ memberInitial(member.userName) }}</span>
             <small>{{ shortName(member.userName) }}</small>
+            <em class="avatar-declare" :class="`avatar-declare--${memberDeclareState(member.userId).key}`">
+              {{ memberDeclareState(member.userId).text }}
+            </em>
           </button>
         </div>
         <div v-if="selectedMember" class="member-detail">
@@ -120,16 +123,19 @@
       </div>
     </van-popup>
 
-    <AppBottomNav current="me" />
+    <AppBottomNav />
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { showFailToast } from 'vant'
 import AppBottomNav from '../../components/AppBottomNav.vue'
-import { getAdminTeam, getAttendanceByDate } from '../../api'
+import { getAdminTeam, getAttendanceByDate, getScheduleDay } from '../../api'
 import { normalizeAttendanceRecord, normalizeTeamMember } from '../../data/models'
+
+const DECLARE_RECORD_STATUSES = ['OFFICE', 'OUTING', 'DINING', 'BUSINESS_TRIP']
 
 const team = ref([])
 const selectedDate = ref(new Date().toISOString().slice(0, 10))
@@ -137,6 +143,7 @@ const weekStartDate = ref(getWeekStart(new Date()))
 const selectedMemberIndex = ref(0)
 const showMonthPicker = ref(false)
 const selectedMemberRecords = ref([])
+const memberDeclareStateByUserId = ref({})
 const router = useRouter()
 
 const monthOptions = computed(() => {
@@ -209,21 +216,67 @@ function getWeekStart(dateInput) {
 }
 
 const loadData = async () => {
-  const response = await getAdminTeam('day', selectedDate.value)
-  team.value = (response.data.items || []).map(normalizeTeamMember)
-  if (selectedMemberIndex.value >= team.value.length) {
-    selectedMemberIndex.value = 0
+  try {
+    const response = await getAdminTeam('day', selectedDate.value)
+    team.value = (response.data.items || []).map(normalizeTeamMember)
+    await loadMemberDeclareStates()
+    if (selectedMemberIndex.value >= team.value.length) {
+      selectedMemberIndex.value = 0
+    }
+    await loadSelectedMemberRecords()
+  } catch (error) {
+    team.value = []
+    selectedMemberRecords.value = []
+    memberDeclareStateByUserId.value = {}
+    showFailToast(error?.response?.data?.error || '团队考勤加载失败，请检查网络或稍后重试')
   }
-  await loadSelectedMemberRecords()
 }
+
+const loadMemberDeclareStates = async () => {
+  if (!team.value.length) {
+    memberDeclareStateByUserId.value = {}
+    return
+  }
+  const statusEntries = await Promise.all(
+    team.value.map(async (member) => {
+      const userId = member.userId
+      if (!userId) return [userId, { key: 'unknown', text: '状态异常' }]
+      try {
+        const [scheduleResponse, attendanceResponse] = await Promise.all([
+          getScheduleDay(userId, selectedDate.value),
+          getAttendanceByDate(userId, selectedDate.value),
+        ])
+        const schedulePayload = scheduleResponse?.data || null
+        if (schedulePayload?.mode === 'leave') {
+          return [userId, { key: 'leave', text: '休假免申报' }]
+        }
+        const records = Array.isArray(attendanceResponse?.data?.records)
+          ? attendanceResponse.data.records.map(normalizeAttendanceRecord)
+          : []
+        const hasDeclared = records.some((record) => DECLARE_RECORD_STATUSES.includes(record.status))
+        return [userId, hasDeclared ? { key: 'declared', text: '已申报' } : { key: 'missing', text: '未申报' }]
+      } catch {
+        return [userId, { key: 'unknown', text: '状态异常' }]
+      }
+    }),
+  )
+  memberDeclareStateByUserId.value = Object.fromEntries(statusEntries)
+}
+
+const memberDeclareState = (userId) => memberDeclareStateByUserId.value[userId] || { key: 'unknown', text: '状态异常' }
 
 const loadSelectedMemberRecords = async () => {
   if (!selectedMember.value?.userId) {
     selectedMemberRecords.value = []
     return
   }
-  const response = await getAttendanceByDate(selectedMember.value.userId, selectedDate.value)
-  selectedMemberRecords.value = (response.data.records || []).map(normalizeAttendanceRecord)
+  try {
+    const response = await getAttendanceByDate(selectedMember.value.userId, selectedDate.value)
+    selectedMemberRecords.value = (response.data.records || []).map(normalizeAttendanceRecord)
+  } catch {
+    selectedMemberRecords.value = []
+    showFailToast('员工当日记录加载失败')
+  }
 }
 
 const selectDate = async (date) => {
@@ -279,7 +332,7 @@ onMounted(async () => {
 .team-topbar { height: 64px; display:flex; align-items:center; justify-content:space-between; background:#fff; border-bottom:1px solid #d8e0f5; padding: 0 12px; }
 .team-topbar h1 { margin: 0; font-size: 20px; color:#102a5c; }
 .back-btn, .month-btn, .icon-btn { border:1px solid #d8e0f5; background:#fff; border-radius:999px; color:#2951c7; height:36px; min-width:36px; display:flex; align-items:center; justify-content:center; padding: 0 12px; }
-.team-content { padding: 14px 14px 84px; display:flex; flex-direction:column; gap:12px; }
+.team-content { padding: 14px 14px var(--app-nav-clearance); display:flex; flex-direction:column; gap:12px; }
 .week-card, .summary-card, .member-card { border:1px solid #d8e0f5; border-radius:14px; background:#fff; padding:12px; box-shadow:0 8px 18px rgba(15, 40, 120, 0.06); }
 .week-switch { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
 .week-title { font-size: 14px; font-weight:700; color:#102a5c; }
@@ -296,9 +349,26 @@ onMounted(async () => {
 .member-head h3 { margin:0; font-size:16px; color:#102a5c; }
 .member-nav { display:flex; gap:6px; }
 .avatar-row { display:flex; gap:8px; overflow:auto; padding-bottom:4px; }
-.avatar-item { border:1px solid #d8e0f5; background:#fff; border-radius:12px; min-width:56px; height:66px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#64748b; }
+.avatar-item { border:1px solid #d8e0f5; background:#fff; border-radius:12px; min-width:72px; min-height:86px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; color:#64748b; padding:4px 6px; }
 .avatar-item span { width:30px; height:30px; border-radius:999px; background:#e8eeff; color:#2c5ee8; display:flex; align-items:center; justify-content:center; font-weight:700; }
 .avatar-item.active { border-color:#2c5ee8; background:#edf2ff; color:#2c5ee8; }
+.avatar-declare {
+  margin-top: 1px;
+  font-style: normal;
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 1px 6px;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.avatar-declare--declared { color:#166534; background:#dcfce7; }
+.avatar-declare--missing { color:#991b1b; background:#fee2e2; }
+.avatar-declare--leave { color:#1d4ed8; background:#dbeafe; }
+.avatar-declare--unknown { color:#475569; background:#e2e8f0; }
 .member-detail { border:1px solid #e4eafc; border-radius:10px; margin-top:10px; padding:10px; background:#fafcff; }
 .detail-head { display:flex; justify-content:space-between; align-items:center; gap:8px; }
 .member-detail h4 { margin:0; color:#102a5c; }

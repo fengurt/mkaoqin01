@@ -1,75 +1,90 @@
 <template>
-  <div class="page-shell">
-    <header class="topbar">
+  <div class="page-shell page-shell--metro">
+    <header class="metro-top">
       <div>
-        <p class="welcome">{{ greetingText }}</p>
-        <h1>首页</h1>
+        <p class="metro-greet">{{ greetingText }}</p>
+        <time class="metro-date" :datetime="todayText()">{{ todayTextDisplay }}</time>
       </div>
-      <button class="icon-btn" type="button">
-        <span class="material-symbols-outlined">notifications</span>
-      </button>
+      <nav class="metro-top-links">
+        <button type="button" class="metro-link ghost" @click="$router.push('/schedule')">行程</button>
+        <button type="button" class="metro-link ghost" @click="$router.push('/my-attendance/day')">考勤</button>
+      </nav>
     </header>
 
-    <main class="content">
-      <section class="hero-row">
-        <button type="button" class="hero-card hero-card-report" @click="openReportModal">
-          <span class="material-symbols-outlined hero-icon">task</span>
-          <div class="hero-text">
-            <h2>工作申报</h2>
-            <p>{{ todayTextDisplay }}</p>
-          </div>
-          <span class="material-symbols-outlined hero-chevron">chevron_right</span>
-        </button>
-        <button type="button" class="hero-card hero-card-out" @click="handleClockOut">
-          <span class="material-symbols-outlined hero-icon">logout</span>
-          <div class="hero-text">
-            <h2>一键打卡下班</h2>
-            <p v-if="hasReportedToday">今日已申报，可打卡</p>
-            <p v-else>需先完成当日申报</p>
-          </div>
-          <span class="material-symbols-outlined hero-chevron">chevron_right</span>
-        </button>
-      </section>
-
-      <section class="card">
-        <h2 class="card-title">关键指标</h2>
-        <div class="kpi-grid">
-          <div class="kpi-item"><span>记录总数</span><strong>{{ records.length }}</strong></div>
-          <div class="kpi-item"><span>最高频行为</span><strong>{{ topActionLabel }}</strong></div>
+    <main class="metro-main" :class="{ 'metro-main--muted': homeBootstrapping }">
+      <section class="metro-live" aria-label="主磁贴">
+        <div class="metro-grid">
+          <button
+            type="button"
+            class="metro-tile metro-tile--in"
+            :disabled="checkInBusy"
+            @click="handleCheckIn"
+          >
+            <span class="metro-tile-ico material-symbols-outlined" aria-hidden="true">login</span>
+            <span class="metro-tile-label">一键打卡上班</span>
+            <span v-if="checkInBusy" class="metro-tile-live">提交中…</span>
+            <span v-else-if="hasCheckedInToday" class="metro-tile-live">今日已签到</span>
+            <span v-else class="metro-tile-live">点击记录到岗</span>
+          </button>
+          <button
+            type="button"
+            class="metro-tile metro-tile--out"
+            :disabled="clockOutBusy"
+            :aria-busy="clockOutBusy"
+            @click="handleClockOut"
+          >
+            <span class="metro-tile-ico material-symbols-outlined" aria-hidden="true">logout</span>
+            <span class="metro-tile-label">一键快乐下班</span>
+            <van-loading v-if="clockOutBusy" class="metro-tile-spinner" type="spinner" size="20px" color="#fff" />
+            <span v-else-if="clockOutBlockedHint" class="metro-tile-live">{{ clockOutBlockedHint }}</span>
+            <span v-else class="metro-tile-live">今日流程已完成？</span>
+          </button>
+          <button
+            type="button"
+            class="metro-tile metro-tile--report metro-tile--wide"
+            :disabled="reportBusy"
+            @click="openReportModal"
+          >
+            <span class="metro-tile-ico material-symbols-outlined" aria-hidden="true">bolt</span>
+            <span class="metro-tile-label">快捷申报</span>
+            <span class="metro-tile-live">{{ reportSubtitle }}</span>
+          </button>
+          <button type="button" class="metro-tile metro-tile--luck metro-tile--wide" @click="openFortunePoster">
+            <span class="metro-tile-ico material-symbols-outlined" aria-hidden="true">auto_awesome</span>
+            <span class="metro-tile-label">今日好运</span>
+            <p class="metro-fortune">{{ fortuneLine }}</p>
+          </button>
         </div>
       </section>
 
-      <section class="card">
-        <h2 class="card-title">快捷入口</h2>
-        <div class="quick-grid">
-          <button class="quick-btn" @click="$router.push('/schedule')"><span class="material-symbols-outlined">event_note</span><span>进入行程</span></button>
-          <button class="quick-btn" @click="$router.push('/my-attendance/day')"><span class="material-symbols-outlined">calendar_month</span><span>我的考勤</span></button>
-          <button class="quick-btn" @click="$router.push('/me')"><span class="material-symbols-outlined">person</span><span>我的主页</span></button>
-          <button class="quick-btn" @click="$router.push('/employee/profile')"><span class="material-symbols-outlined">badge</span><span>个人资料</span></button>
+      <section class="metro-pivot" aria-label="今日班次">
+        <div class="metro-pivot-head">
+          <span>今日班次</span>
+          <small>{{ reportSchedule?.mode === 'leave' ? '休假模式' : '常规班次' }}</small>
+        </div>
+        <div class="today-shift-row">
+          <button type="button" class="report-schedule-pill" @click="showReportSchedulePicker = true">
+            {{ reportSchedule?.pillText || '点击确认当日排班' }}
+          </button>
         </div>
       </section>
 
-      <section class="card">
-        <h2 class="card-title">关键行为汇总（今日）</h2>
-        <div v-if="sortedSummary.length" class="summary-list">
-          <div v-for="item in sortedSummary" :key="item.key" class="summary-item">
-            <span>{{ item.label }}</span>
-            <strong>{{ item.count }}</strong>
+      <section class="metro-pivot" aria-label="今日实况">
+        <div class="metro-pivot-head">
+          <span>实况</span>
+          <small>{{ records.length }} 条 · 高频 {{ topActionLabel }}</small>
+        </div>
+        <div class="metro-pivot-track">
+          <div v-if="sortedSummary.length" class="metro-chips">
+            <span v-for="item in sortedSummary" :key="item.key" class="metro-chip">{{ item.label }} ×{{ item.count }}</span>
           </div>
-        </div>
-        <div v-else class="empty">今天还没有行为记录，可使用上方「工作申报」或去行程新建。</div>
-      </section>
-
-      <section class="card">
-        <h2 class="card-title">最近动态</h2>
-        <div v-if="records.length === 0" class="empty">暂无行为记录</div>
-        <div v-else class="timeline-list">
-          <div v-for="record in records" :key="record.id" class="timeline-item">
-            <div class="timeline-time">{{ formatClock(record.occurredAt) }}</div>
-            <div class="timeline-content">
-              <div class="timeline-title">{{ record.statusLabel }}</div>
-              <div class="timeline-desc">{{ record.location }} · {{ record.reason }}</div>
-            </div>
+          <p v-if="records.length === 0" class="metro-pivot-empty">今日尚无记录 · 试一下左侧上班打卡或快捷申报</p>
+          <div v-else class="metro-cards">
+            <article v-for="record in records" :key="record.id" class="metro-mini-card">
+              <time class="metro-mini-time">{{ formatClock(record.occurredAt) }}</time>
+              <p class="metro-mini-title">{{ record.statusLabel }}</p>
+              <p class="metro-mini-meta">{{ record.location }}</p>
+            </article>
           </div>
         </div>
       </section>
@@ -81,15 +96,24 @@
           <h3>工作申报</h3>
           <button type="button" class="modal-close" @click="showReportModal = false">关闭</button>
         </div>
-        <van-field
-          v-model="form.dateDisplay"
-          is-link
-          readonly
-          label="日期"
-          placeholder="选择日期"
-          @click="showCalendar = true"
-        />
-        <van-field v-model="form.location" label="地点" placeholder="默认公司" />
+        <div class="report-meta-card">
+          <van-field
+            v-model="form.dateDisplay"
+            is-link
+            readonly
+            class="report-meta-field"
+            label="日期"
+            placeholder="选择日期"
+            @click="showCalendar = true"
+          />
+          <div class="report-schedule-row report-meta-field">
+            <span class="report-schedule-label">当日排班</span>
+            <button type="button" class="report-schedule-pill" @click="showReportSchedulePicker = true">
+              {{ reportSchedule?.pillText || '点击设置' }}
+            </button>
+          </div>
+          <van-field v-model="form.location" class="report-meta-field report-meta-field--last" label="地点" placeholder="拜访/会议等默认地点（可选）" />
+        </div>
         <div class="lines-section">
           <div class="lines-head">
             <p class="tag-label">申报内容</p>
@@ -114,10 +138,45 @@
                 type="button"
                 class="tag-btn tag-btn-compact"
                 :class="{ active: line.tagIndex === index }"
-                @click="line.tagIndex = index"
+                @click="selectReportTag(line, index)"
               >
                 {{ tag.label }}
               </button>
+            </div>
+            <div v-if="tagOptions[line.tagIndex]?.introSlug" class="intro-link-row">
+              <button type="button" class="text-link" @click="openIntro(tagOptions[line.tagIndex].introSlug)">
+                查看地点介绍
+              </button>
+            </div>
+            <div v-if="tagOptions[line.tagIndex]?.requiresDiningPick" class="dining-pick">
+              <p class="dining-pick-label">澳门美高梅（半岛店）</p>
+              <div class="dining-chip-grid">
+                <div v-for="rest in peninsulaDining" :key="rest.slug" class="dining-chip-row">
+                  <button
+                    type="button"
+                    class="dining-chip"
+                    :class="{ active: line.diningSlug === rest.slug }"
+                    @click="line.diningSlug = rest.slug"
+                  >
+                    {{ rest.title }}
+                  </button>
+                  <button type="button" class="dining-info-btn" @click="openIntro(rest.slug)">介绍</button>
+                </div>
+              </div>
+              <p class="dining-pick-label dining-pick-label--spaced">美狮美高梅（氹仔店）</p>
+              <div class="dining-chip-grid">
+                <div v-for="rest in cotaiDining" :key="rest.slug" class="dining-chip-row">
+                  <button
+                    type="button"
+                    class="dining-chip"
+                    :class="{ active: line.diningSlug === rest.slug }"
+                    @click="line.diningSlug = rest.slug"
+                  >
+                    {{ rest.title }}
+                  </button>
+                  <button type="button" class="dining-info-btn" @click="openIntro(rest.slug)">介绍</button>
+                </div>
+              </div>
             </div>
             <van-field
               v-model="line.reason"
@@ -130,12 +189,23 @@
             />
           </div>
         </div>
-        <van-button type="primary" block class="save-report-btn" @click="submitReport">保存申报</van-button>
+        <van-button
+          type="primary"
+          block
+          class="save-report-btn"
+          :loading="reportBusy"
+          loading-text="提交中..."
+          @click="submitReport"
+        >
+          保存申报
+        </van-button>
         <van-button
           v-if="reportSaved || hasReportedToday"
           type="success"
           block
           class="checkout-btn"
+          :loading="clockOutBusy"
+          loading-text="打卡中..."
           @click="submitClockOutFromModal"
         >
           打卡下班
@@ -145,7 +215,24 @@
 
     <van-calendar v-model:show="showCalendar" :min-date="minCalendarDate" :max-date="maxCalendarDate" @confirm="onCalendarConfirm" />
 
-    <AppBottomNav current="home" />
+    <CatalogIntroPopup v-model="introOpen" :title="introTitle" :detail="introDetail" />
+
+    <DailySchedulePicker
+      v-model="showReportSchedulePicker"
+      :date-str="form.date"
+      :user-id="Number(user.id) || 1"
+      :resolved-schedule="reportSchedule"
+      @applied="onReportScheduleApplied"
+    />
+
+    <van-popup v-model:show="showFortunePoster" round :style="{ width: '92%', maxWidth: '420px' }">
+      <div class="fortune-modal">
+        <img v-if="activeFortuneImageSrc" :src="activeFortuneImageSrc" alt="今日好运签" class="fortune-image" @error="onFortuneImageError" />
+        <p class="fortune-fallback" v-else>{{ fortuneLine }}</p>
+      </div>
+    </van-popup>
+
+    <AppBottomNav />
   </div>
 </template>
 
@@ -153,7 +240,10 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { showConfirmDialog, showFailToast, showSuccessToast } from 'vant'
 import AppBottomNav from '../components/AppBottomNav.vue'
-import { getAttendanceByDate, submitStatus } from '../api'
+import CatalogIntroPopup from '../components/CatalogIntroPopup.vue'
+import DailySchedulePicker from '../components/DailySchedulePicker.vue'
+import { getAttendanceByDate, getScheduleDay, submitStatus } from '../api'
+import { REGION_HOTEL_TITLE, useLocationCatalog } from '../composables/useLocationCatalog'
 import { formatClock, normalizeAttendanceRecord, STATUS_LABEL } from '../data/models'
 
 const REPORT_STATUSES = ['OFFICE', 'OUTING', 'DINING', 'BUSINESS_TRIP']
@@ -173,19 +263,156 @@ const greetingText = computed(() => {
 const showReportModal = ref(false)
 const showCalendar = ref(false)
 const reportSaved = ref(false)
+const homeBootstrapping = ref(true)
+const reportBusy = ref(false)
+const clockOutBusy = ref(false)
+const checkInBusy = ref(false)
+const showFortunePoster = ref(false)
+const activeFortuneImageSrc = ref('')
+const fortuneImageOrder = ref([])
+const fortuneImageCursor = ref(0)
+
+const reportSchedule = ref(null)
+const showReportSchedulePicker = ref(false)
+
+const loadReportSchedule = async () => {
+  try {
+    const { data } = await getScheduleDay(user.id || 1, form.date)
+    reportSchedule.value = data
+  } catch {
+    reportSchedule.value = null
+  }
+}
+
+const onReportScheduleApplied = (payload) => {
+  reportSchedule.value = payload
+}
+
+const scheduleReasonPrefix = computed(() => {
+  const pill = reportSchedule.value?.pillText
+  return pill ? `【排班·${pill}】` : ''
+})
+
+const FORTUNE_LINES = [
+  '稳住节奏，今天适合把关键事往前推一小步。',
+  '沟通比猜测更省力，开口就有转机。',
+  '小事认真收尾，会换来一整天的轻松。',
+  '留一点空白时间，反而更容易抓住重点。',
+  '今日宜专注：一次只做一件要事。',
+  '把目标写清楚，执行会顺很多。',
+  '适当起身走动，思路会自己找上门。',
+  '对同事多点耐心，效率会反弹回来。',
+]
+
+const isSameLocalDay = (occurredAtIso, ymd) => {
+  if (!occurredAtIso || !ymd) return false
+  const d = new Date(occurredAtIso)
+  if (Number.isNaN(d.getTime())) return false
+  const yy = d.getFullYear()
+  const mo = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${yy}-${mo}-${day}` === ymd
+}
+
+const fortuneLine = computed(() => {
+  const seed = [...todayText()].reduce((acc, character) => acc + character.charCodeAt(0), 0)
+  const uid = Number(user.id) || 0
+  const index = (seed + uid) % FORTUNE_LINES.length
+  return FORTUNE_LINES[index]
+})
+
+const FORTUNE_IMAGE_FILES = [
+  '/@fs/Users/af/.cursor/projects/Users-af-cpro01-prioritized01-goms-intervoice01/assets/___01-_____Medium-4ade1249-5ee2-4aa0-9ba4-3af93ea68817.png',
+  '/@fs/Users/af/.cursor/projects/Users-af-cpro01-prioritized01-goms-intervoice01/assets/___02-_____Medium-42139af7-913e-4f1b-a43b-6bf513e2cab3.png',
+  '/@fs/Users/af/.cursor/projects/Users-af-cpro01-prioritized01-goms-intervoice01/assets/___03-_____Medium-5a78044d-409a-44f7-914b-edab5b4ee6b4.png',
+  '/@fs/Users/af/.cursor/projects/Users-af-cpro01-prioritized01-goms-intervoice01/assets/___04-_____Medium-340c1d61-0cd5-49a2-a239-94130f251357.png',
+  '/@fs/Users/af/.cursor/projects/Users-af-cpro01-prioritized01-goms-intervoice01/assets/___05-______Medium-2918e36a-1bf9-4ba4-bcbe-609d7e127020.png',
+  '/@fs/Users/af/.cursor/projects/Users-af-cpro01-prioritized01-goms-intervoice01/assets/___06-_____Medium-a7e33781-73b4-493c-91b1-97632ebcf47c.png',
+  '/@fs/Users/af/.cursor/projects/Users-af-cpro01-prioritized01-goms-intervoice01/assets/___07-_____Medium-275f5415-8209-43d1-bce4-f172667bc1c8.png',
+  '/@fs/Users/af/.cursor/projects/Users-af-cpro01-prioritized01-goms-intervoice01/assets/___08-_____Medium-c737a7d6-13ef-4c13-b864-4bfc1e9a786d.png',
+  '/@fs/Users/af/.cursor/projects/Users-af-cpro01-prioritized01-goms-intervoice01/assets/___09-_____Medium-860fbd8b-73b5-4fa6-acbf-5e06eeea4b0f.png',
+  '/@fs/Users/af/.cursor/projects/Users-af-cpro01-prioritized01-goms-intervoice01/assets/___10-_____Medium-0f6b40c7-c5c0-4d26-b70e-96da90763da0.png',
+]
+
+const pickRandomFortuneImage = () => {
+  if (!FORTUNE_IMAGE_FILES.length) return ''
+  const randomIndex = Math.floor(Math.random() * FORTUNE_IMAGE_FILES.length)
+  return FORTUNE_IMAGE_FILES[randomIndex]
+}
+
+const buildFortuneImageOrder = () => {
+  const list = [...FORTUNE_IMAGE_FILES]
+  for (let i = list.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const temp = list[i]
+    list[i] = list[j]
+    list[j] = temp
+  }
+  return list
+}
+
+const openFortunePoster = () => {
+  fortuneImageOrder.value = buildFortuneImageOrder()
+  fortuneImageCursor.value = 0
+  activeFortuneImageSrc.value = fortuneImageOrder.value[0] || pickRandomFortuneImage()
+  showFortunePoster.value = true
+}
+
+const onFortuneImageError = () => {
+  fortuneImageCursor.value += 1
+  if (fortuneImageCursor.value < fortuneImageOrder.value.length) {
+    activeFortuneImageSrc.value = fortuneImageOrder.value[fortuneImageCursor.value]
+    return
+  }
+  activeFortuneImageSrc.value = ''
+}
 
 const tagOptions = [
   { status: 'OUTING', label: '拜访客户' },
-  { status: 'DINING', label: '商务用餐' },
+  { status: 'DINING', label: '商务用餐', requiresDiningPick: true },
   { status: 'OFFICE', label: '会议' },
   { status: 'BUSINESS_TRIP', label: '出差' },
-  { status: 'OFFICE', label: '在岗办公' },
+  {
+    status: 'OFFICE',
+    label: '在岗办公 · 半岛店',
+    presetLocation: '澳门美高梅（半岛店）',
+    introSlug: 'mgm_peninsula_hotel',
+  },
+  {
+    status: 'OFFICE',
+    label: '在岗办公 · 氹仔店',
+    presetLocation: '美狮美高梅（氹仔店）',
+    introSlug: 'mgm_cotai_hotel',
+  },
 ]
+
+const { catalogBySlug, peninsulaDining, cotaiDining, loadLocationCatalog } = useLocationCatalog()
+
+const introOpen = ref(false)
+const introTitle = ref('')
+const introDetail = ref('')
+
+const openIntro = (slug) => {
+  const row = catalogBySlug.value.get(slug)
+  introTitle.value = row?.title || ''
+  introDetail.value = row?.detail || ''
+  if (!introDetail.value.trim()) {
+    showFailToast('暂无介绍内容')
+    return
+  }
+  introOpen.value = true
+}
+
+const selectReportTag = (line, index) => {
+  line.tagIndex = index
+  const tag = tagOptions[index]
+  if (!tag?.requiresDiningPick) line.diningSlug = ''
+}
 
 let reportLineSeq = 0
 const createEmptyReportLine = () => {
   reportLineSeq += 1
-  return { id: reportLineSeq, tagIndex: 4, reason: '' }
+  return { id: reportLineSeq, tagIndex: 4, reason: '', diningSlug: '' }
 }
 const reportLines = ref([createEmptyReportLine()])
 
@@ -215,13 +442,38 @@ const onCalendarConfirm = (value) => {
 }
 
 const loadRecords = async () => {
-  const response = await getAttendanceByDate(user.id || 1, todayText())
-  records.value = (response.data.records || []).map(normalizeAttendanceRecord)
+  try {
+    const response = await getAttendanceByDate(user.id || 1, todayText())
+    records.value = (response.data.records || []).map(normalizeAttendanceRecord)
+  } catch {
+    records.value = []
+    showFailToast('今日记录加载失败')
+  } finally {
+    homeBootstrapping.value = false
+  }
 }
 
 const hasReportedToday = computed(() =>
   records.value.some((row) => REPORT_STATUSES.includes(row.status)),
 )
+
+const hasCheckedInToday = computed(() =>
+  records.value.some(
+    (row) => row.status === 'CHECK_IN' && isSameLocalDay(row.occurredAt, todayText()),
+  ),
+)
+
+const reportSubtitle = computed(() => {
+  if (reportBusy.value) return '正在提交…'
+  if (hasReportedToday.value) return '今日已有申报 · 可继续补充'
+  return '多行申报 · MGM 在岗与餐厅'
+})
+
+const clockOutBlockedHint = computed(() => {
+  if (clockOutBusy.value) return ''
+  if (!hasReportedToday.value) return '请先完成当日申报'
+  return '随时可以快乐下班'
+})
 
 const sortedSummary = computed(() => {
   const counter = {}
@@ -266,6 +518,7 @@ const openReportModal = () => {
   reportLines.value = [createEmptyReportLine()]
   reportSaved.value = hasReportedToday.value
   showReportModal.value = true
+  loadReportSchedule()
 }
 
 const submitReport = async () => {
@@ -273,12 +526,29 @@ const submitReport = async () => {
     .map((line) => ({
       tagIndex: line.tagIndex,
       reason: line.reason.trim(),
+      diningSlug: (line.diningSlug || '').trim(),
     }))
     .filter((line) => line.reason.length >= 2)
 
   if (payloadLines.length === 0) {
     showFailToast('请至少填写一条申报内容（每条至少2个字）')
     return
+  }
+
+  for (let i = 0; i < payloadLines.length; i += 1) {
+    const line = payloadLines[i]
+    const tag = tagOptions[line.tagIndex]
+    if (tag?.requiresDiningPick) {
+      if (!line.diningSlug) {
+        showFailToast('商务用餐请选择餐厅')
+        return
+      }
+      const row = catalogBySlug.value.get(line.diningSlug)
+      if (!row) {
+        showFailToast('餐厅目录未加载，请稍后重试')
+        return
+      }
+    }
   }
 
   try {
@@ -296,15 +566,29 @@ const submitReport = async () => {
   const locationText = form.location.trim() || '公司'
   const baseOccurredAt = occurredAtForFormDate()
 
+  const resolveLineLocation = (tag, line) => {
+    if (tag?.presetLocation) return tag.presetLocation
+    if (tag?.requiresDiningPick && line.diningSlug) {
+      const row = catalogBySlug.value.get(line.diningSlug)
+      if (row) {
+        const hotelTitle = REGION_HOTEL_TITLE[row.region] || ''
+        return `${hotelTitle}·${row.title}`
+      }
+    }
+    return locationText
+  }
+
+  reportBusy.value = true
   try {
     for (let i = 0; i < payloadLines.length; i += 1) {
       const line = payloadLines[i]
       const tag = tagOptions[line.tagIndex]
+      const reasonText = [scheduleReasonPrefix.value, line.reason].filter(Boolean).join(' ').trim()
       await submitStatus({
         userId: user.id || 1,
         status: tag.status,
-        location: locationText,
-        reason: line.reason,
+        location: resolveLineLocation(tag, line),
+        reason: reasonText,
         occurredAt: bumpOccurredAtLocal(baseOccurredAt, i),
       })
     }
@@ -313,6 +597,8 @@ const submitReport = async () => {
     await loadRecords()
   } catch {
     showFailToast('保存失败，请重试')
+  } finally {
+    reportBusy.value = false
   }
 }
 
@@ -321,12 +607,13 @@ const submitClockOutFromModal = async () => {
     showFailToast('请先完成当日工作申报')
     return
   }
+  clockOutBusy.value = true
   try {
     await submitStatus({
       userId: user.id || 1,
       status: 'CHECK_OUT',
       location: form.location.trim() || '公司',
-      reason: '下班打卡',
+      reason: [scheduleReasonPrefix.value, '下班打卡'].filter(Boolean).join(' ').trim(),
       occurredAt: new Date().toISOString(),
     })
     showSuccessToast('下班打卡成功')
@@ -334,6 +621,51 @@ const submitClockOutFromModal = async () => {
     await loadRecords()
   } catch {
     showFailToast('打卡失败，请重试')
+  } finally {
+    clockOutBusy.value = false
+  }
+}
+
+const handleCheckIn = async () => {
+  if (hasCheckedInToday.value) {
+    showFailToast('今日已签到上班')
+    return
+  }
+  await loadReportSchedule()
+  const scheduleText = reportSchedule.value?.pillText || '未设置（将按默认班次记录）'
+  try {
+    await showConfirmDialog({
+      title: '确认今日班次',
+      message: `请确认当日排班：${scheduleText}`,
+      confirmButtonText: '班次正确，继续打卡',
+      cancelButtonText: '去调整班次',
+    })
+  } catch {
+    showReportSchedulePicker.value = true
+    return
+  }
+
+  const now = new Date()
+  const currentMinutes = now.getHours() * 60 + now.getMinutes()
+  const [startHour, startMinute] = String(reportSchedule.value?.startTime || '09:00').split(':').map(Number)
+  const shiftStartMinutes = (Number.isFinite(startHour) ? startHour : 9) * 60 + (Number.isFinite(startMinute) ? startMinute : 0)
+  const isLate = currentMinutes > shiftStartMinutes
+
+  checkInBusy.value = true
+  try {
+    await submitStatus({
+      userId: user.id || 1,
+      status: 'CHECK_IN',
+      location: '公司',
+      reason: [scheduleReasonPrefix.value, '上班打卡'].filter(Boolean).join(' ').trim(),
+      occurredAt: new Date().toISOString(),
+    })
+    showSuccessToast(isLate ? '上班打卡成功（今日已迟到）' : '上班打卡成功（今日正常上班）')
+    await loadRecords()
+  } catch {
+    showFailToast('打卡失败，请重试')
+  } finally {
+    checkInBusy.value = false
   }
 }
 
@@ -352,86 +684,344 @@ const handleClockOut = async () => {
     }
     return
   }
+  await loadReportSchedule()
+
+  const now = new Date()
+  const currentMinutes = now.getHours() * 60 + now.getMinutes()
+  const [endHour, endMinute] = String(reportSchedule.value?.endTime || '18:00').split(':').map(Number)
+  const shiftEndMinutes = (Number.isFinite(endHour) ? endHour : 18) * 60 + (Number.isFinite(endMinute) ? endMinute : 0)
+  if (currentMinutes < shiftEndMinutes) {
+    try {
+      await showConfirmDialog({
+        title: '提前下班确认',
+        message: `当前未到下班时间（班次结束 ${reportSchedule.value?.endTime || '18:00'}），确认提前下班？`,
+        confirmButtonText: '确认提前下班',
+        cancelButtonText: '取消',
+      })
+    } catch {
+      return
+    }
+  }
+
+  clockOutBusy.value = true
   try {
     await submitStatus({
       userId: user.id || 1,
       status: 'CHECK_OUT',
       location: '公司',
-      reason: '下班打卡',
+      reason: [scheduleReasonPrefix.value, '下班打卡'].filter(Boolean).join(' ').trim(),
       occurredAt: new Date().toISOString(),
     })
     showSuccessToast('下班打卡成功')
     await loadRecords()
   } catch {
     showFailToast('打卡失败，请重试')
+  } finally {
+    clockOutBusy.value = false
   }
 }
 
 watch(showReportModal, (visible) => {
   if (visible) {
     reportSaved.value = hasReportedToday.value
+    loadReportSchedule()
   }
 })
 
-onMounted(loadRecords)
+watch(
+  () => form.date,
+  () => {
+    if (showReportModal.value) loadReportSchedule()
+  },
+)
+
+onMounted(async () => {
+  loadLocationCatalog()
+  await loadRecords()
+  await loadReportSchedule()
+})
 </script>
 
 <style scoped>
-.page-shell { min-height: 100vh; background:#f6f8ff; }
-.topbar { height:72px; background:#fff; border-bottom:1px solid #d8e0f5; display:flex; align-items:center; justify-content:space-between; padding:0 16px; }
-.welcome { margin:0; font-size:12px; color:#64748b; }
-.topbar h1 { margin:0; font-size:22px; color:#0f172a; }
-.icon-btn { width:38px; height:38px; border:1px solid #d8e0f5; border-radius:999px; background:#fff; color:#3156cb; }
-.content { padding:16px 16px 84px; display:flex; flex-direction:column; gap:12px; }
+.page-shell--metro {
+  min-height: 100vh;
+  background: var(--brand-surface);
+  color: var(--brand-title);
+}
+.metro-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 14px 16px 10px;
+  background: var(--metro-header-bg);
+  color: var(--metro-header-text);
+}
+.metro-greet {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.78;
+}
+.metro-date {
+  display: block;
+  margin-top: 2px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.metro-top-links {
+  display: flex;
+  gap: 6px;
+}
+.metro-link.ghost {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: transparent;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 11px;
+  border-radius: 2px;
+}
+.metro-main {
+  padding: 14px 14px calc(var(--app-nav-clearance) + 8px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.metro-main--muted {
+  opacity: 0.55;
+  pointer-events: none;
+}
+.metro-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.metro-tile {
+  border: 0;
+  border-radius: 2px;
+  min-height: 104px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  text-align: left;
+  cursor: pointer;
+  color: #fff;
+}
+.metro-tile:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.metro-tile--wide {
+  grid-column: 1 / -1;
+  min-height: 118px;
+}
+.metro-tile--in {
+  background: var(--metro-tile-in);
+}
+.metro-tile--out {
+  background: var(--metro-tile-out);
+}
+.metro-tile--report {
+  background: var(--metro-tile-report);
+}
+.metro-tile--luck {
+  background: var(--metro-tile-luck);
+}
+.metro-tile-ico {
+  font-size: 30px;
+  opacity: 0.95;
+  margin-bottom: auto;
+}
+.metro-tile-label {
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+.metro-tile-live {
+  margin-top: 5px;
+  font-size: 12px;
+  opacity: 0.9;
+}
+.metro-tile-spinner {
+  margin-top: 6px;
+}
+.metro-fortune {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.45;
+  font-weight: 500;
+  opacity: 0.95;
+  max-height: 3.15em;
+  overflow: hidden;
+}
+.metro-pivot {
+  background: var(--metro-pivot-bg);
+  border-radius: 10px;
+  border: 1px solid var(--brand-border);
+}
+.metro-pivot-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 10px 12px 4px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--brand-subtext);
+}
+.metro-pivot-head small {
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--brand-subtext);
+  opacity: 0.85;
+}
+.metro-pivot-track {
+  padding: 0 8px 10px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+.metro-chips {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  padding: 8px 4px;
+}
+.metro-chip {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--metro-chip-bg);
+  color: var(--metro-header-text);
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+.metro-cards {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  padding: 4px;
+}
+.metro-mini-card {
+  flex: 0 0 auto;
+  width: min(164px, 52vw);
+  scroll-snap-align: start;
+  background: var(--brand-card);
+  border: 1px solid var(--brand-border);
+  border-radius: 10px;
+  padding: 10px;
+}
+.metro-mini-time {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--brand-text);
+  font-variant-numeric: tabular-nums;
+}
+.metro-mini-title {
+  margin: 6px 0 4px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--brand-title);
+}
+.metro-mini-meta {
+  margin: 0;
+  font-size: 11px;
+  color: var(--brand-subtext);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.metro-pivot-empty {
+  margin: 0;
+  padding: 12px 8px;
+  font-size: 13px;
+  color: var(--brand-subtext);
+}
+.today-shift-row {
+  padding: 10px 12px 12px;
+}
+.fortune-modal {
+  padding: 8px;
+  background: #fff;
+}
+.fortune-image {
+  width: 100%;
+  border-radius: 10px;
+  display: block;
+}
+.fortune-fallback {
+  margin: 0;
+  padding: 24px 14px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--brand-subtext);
+}
 
-.hero-row { display:flex; flex-direction:column; gap:10px; }
-.hero-card {
-  border:0;
-  border-radius:14px;
-  padding:14px;
+.report-modal { padding:10px 12px 16px; max-height:100%; overflow:auto; }
+.report-modal-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:10px;
+  padding: 2px 0 8px;
+  background: #fff;
+}
+.report-modal-head h3 { margin:0; font-size:18px; color:#0f172a; }
+.report-meta-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fbff;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.report-meta-field {
+  border-bottom: 1px solid #e8eef9;
+}
+.report-meta-field--last {
+  border-bottom: 0;
+}
+.report-meta-field :deep(.van-field__label) {
+  color: #64748b;
+  font-weight: 600;
+}
+.report-schedule-row {
   display:flex;
   align-items:center;
-  gap:12px;
-  text-align:left;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 12px;
+}
+.report-schedule-label {
+  flex-shrink:0;
+  font-size:13px;
+  font-weight:600;
+  color:#64748b;
+}
+.report-schedule-pill {
+  font-size:11px;
+  font-weight:700;
+  color:var(--brand-primary-mid,#2563eb);
+  background:var(--brand-primary-soft,#eff6ff);
+  border:1px solid #bfdbfe;
+  border-radius:999px;
+  padding:6px 12px;
+  white-space:nowrap;
   cursor:pointer;
-  box-shadow:0 12px 26px rgba(46,88,214,0.18);
-  color:#fff;
+  font-family:inherit;
+  -webkit-tap-highlight-color:transparent;
 }
-.hero-card-report {
-  background:linear-gradient(135deg,#2e58d6,#6b8dff);
+.report-schedule-pill:active {
+  filter:brightness(0.97);
 }
-.hero-card-out {
-  background:linear-gradient(135deg,#0f766e,#14b8a6);
-}
-.hero-card h2 { margin:0; font-size:16px; }
-.hero-card p { margin:4px 0 0; font-size:12px; opacity:0.92; }
-.hero-icon { font-size:28px; opacity:0.95; }
-.hero-text { flex:1; min-width:0; }
-.hero-chevron { font-size:22px; opacity:0.85; }
-
-.card { background:#fff; border:1px solid #d8e0f5; border-radius:12px; padding:12px; box-shadow:0 8px 18px rgba(15,40,120,0.05); }
-.card-title { margin:0 0 10px; font-size:16px; color:#0f172a; }
-.kpi-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
-.kpi-item { border:1px solid #e4eafc; border-radius:10px; padding:10px; display:flex; flex-direction:column; gap:6px; }
-.kpi-item span { color:#64748b; font-size:12px; }
-.kpi-item strong { color:#3156cb; font-size:16px; }
-.summary-list { display:flex; flex-direction:column; gap:8px; }
-.summary-item { display:flex; justify-content:space-between; border:1px solid #e4eafc; border-radius:10px; padding:8px 10px; font-size:13px; }
-.summary-item strong { color:#3156cb; }
-.empty { color:#64748b; font-size:13px; }
-.timeline-list { display:flex; flex-direction:column; gap:8px; }
-.timeline-item { display:flex; gap:10px; border-bottom:1px dashed #e4eafc; padding:8px 0; }
-.timeline-time { font-size:12px; color:#64748b; width:60px; }
-.timeline-title { font-size:13px; font-weight:700; }
-.timeline-desc { font-size:12px; color:#64748b; margin-top:2px; }
-.quick-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
-.quick-btn { border:1px solid #dbe3ef; border-radius:10px; background:#fff; padding:10px; display:flex; flex-direction:column; align-items:flex-start; gap:6px; color:#0f172a; font-size:13px; transition:all .2s; }
-.quick-btn:active { transform:translateY(1px) scale(0.99); background:#f1f5ff; }
-.quick-btn .material-symbols-outlined { color:#3156cb; }
-
-.report-modal { padding:16px 16px 24px; max-height:100%; overflow:auto; }
-.report-modal-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
-.report-modal-head h3 { margin:0; font-size:18px; color:#0f172a; }
 .modal-close { border:0; background:transparent; color:#3156cb; font-size:14px; }
 .tag-section { margin:8px 0; }
 .tag-label { margin:0 0 8px; font-size:12px; color:#64748b; }
@@ -450,7 +1040,7 @@ onMounted(loadRecords)
   color:#3156cb;
   font-weight:700;
 }
-.lines-section { margin-top:4px; }
+.lines-section { margin-top:6px; }
 .lines-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
 .lines-head .tag-label { margin:0; }
 .add-line-btn {
@@ -493,4 +1083,44 @@ onMounted(loadRecords)
 }
 .save-report-btn { margin-top:12px; }
 .checkout-btn { margin-top:10px; }
+
+.intro-link-row { margin: 2px 0 6px; }
+.text-link {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font-size: 12px;
+  color: #3156cb;
+  text-decoration: underline;
+}
+.dining-pick { margin: 4px 0 8px; padding: 8px; border-radius: 8px; background: #fff; border: 1px dashed #c7d2fe; }
+.dining-pick-label { margin: 0 0 6px; font-size: 11px; color: #64748b; font-weight: 600; }
+.dining-pick-label--spaced { margin-top: 10px; }
+.dining-chip-grid { display: flex; flex-direction: column; gap: 6px; }
+.dining-chip-row { display: flex; align-items: center; gap: 6px; }
+.dining-chip {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid #dbe3ef;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 11px;
+  background: #fff;
+  color: #475569;
+  text-align: left;
+}
+.dining-chip.active {
+  border-color: #3156cb;
+  background: #eef4ff;
+  color: #3156cb;
+  font-weight: 700;
+}
+.dining-info-btn {
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 11px;
+  padding: 4px 6px;
+}
 </style>

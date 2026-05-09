@@ -19,6 +19,7 @@
    - `cp .env.example .env`
 2. Start all:
    - `bash scripts/dev-up.sh`
+   - 若新增或修改了 gateway/admin 路由后接口返回 **404**，请再执行一次 `bash scripts/dev-down.sh` 后 `bash scripts/dev-up.sh`（各服务使用 `go run`，需重启方能加载最新代码）。
 3. Stop all:
    - `bash scripts/dev-down.sh`
 4. Voice API smoke:
