@@ -2,7 +2,6 @@
   <div class="page-shell">
     <header class="topbar">
       <h1>我的</h1>
-      <span class="material-symbols-outlined">manage_accounts</span>
     </header>
 
     <main class="content">

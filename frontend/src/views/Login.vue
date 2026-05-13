@@ -46,8 +46,8 @@ import { showToast } from 'vant'
 import { login } from '../api'
 
 const router = useRouter()
-const account = ref('132369')
-const password = ref('123456a')
+const account = ref('')
+const password = ref('')
 const loggingIn = ref(false)
 
 const routeByRole = (role) => {
