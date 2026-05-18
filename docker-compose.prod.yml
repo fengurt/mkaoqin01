@@ -28,6 +28,7 @@ services:
     environment:
       ATTENDANCE_ADDR: ":8002"
       DB_PATH: /app/data/intervoice.db
+      UPLOAD_ROOT: /app/data/uploads
       JWT_SECRET: ${JWT_SECRET:-intervoice-dev-secret}
     volumes:
       - ./data:/app/data
@@ -73,6 +74,7 @@ services:
     environment:
       ADMIN_ADDR: ":8004"
       DB_PATH: /app/data/intervoice.db
+      UPLOAD_ROOT: /app/data/uploads
       JWT_SECRET: ${JWT_SECRET:-intervoice-dev-secret}
     volumes:
       - ./data:/app/data
