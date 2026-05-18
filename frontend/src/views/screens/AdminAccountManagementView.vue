@@ -26,7 +26,10 @@
               <div class="user-name">{{ item.displayName }}（{{ item.role === 'admin' ? '管理员' : '员工' }}）</div>
               <div class="user-account">账号：{{ item.account }}</div>
             </div>
-            <van-button size="small" type="primary" plain @click="openResetPassword(item)">重置密码</van-button>
+            <div class="user-actions">
+              <van-button size="small" type="primary" plain @click="goFortuneAdmin(item)">今日好运</van-button>
+              <van-button size="small" type="primary" plain @click="openResetPassword(item)">重置密码</van-button>
+            </div>
           </div>
         </div>
       </section>
@@ -45,8 +48,11 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { showFailToast, showSuccessToast } from 'vant'
 import { getAuthUsers, resetUserPassword } from '../../api'
+
+const router = useRouter()
 
 const users = ref([])
 const keyword = ref('')
@@ -98,6 +104,13 @@ const loadUsers = async () => {
   }
 }
 
+const goFortuneAdmin = (targetUser) => {
+  router.push({
+    path: `/me/accounts/${targetUser.id}/fortune`,
+    query: { name: targetUser.displayName || targetUser.account || '' },
+  })
+}
+
 const openResetPassword = (targetUser) => {
   resetTarget.value = targetUser
   resetPasswordValue.value = ''
@@ -136,6 +149,7 @@ onMounted(loadUsers)
 .empty { color: #64748b; font-size: 13px; }
 .list-wrap { display: flex; flex-direction: column; gap: 8px; }
 .user-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; border: 1px solid #eef2f7; border-radius: 10px; padding: 10px; }
+.user-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
 .user-name { font-size: 13px; font-weight: 700; color: #0f172a; }
 .user-account { font-size: 12px; color: #64748b; margin-top: 4px; }
 .popup-body { padding: 16px; display: flex; flex-direction: column; gap: 10px; }

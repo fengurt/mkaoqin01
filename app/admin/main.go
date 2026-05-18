@@ -48,10 +48,10 @@ ORDER BY u.id ASC`)
 			var occurredAt string
 			_ = rows.Scan(&userID, &userName, &status, &location, &occurredAt)
 			items = append(items, map[string]any{
-				"userId": userID,
-				"userName": userName,
-				"status": status,
-				"location": location,
+				"userId":     userID,
+				"userName":   userName,
+				"status":     status,
+				"location":   location,
 				"occurredAt": occurredAt,
 			})
 		}
@@ -205,6 +205,35 @@ ORDER BY u.id ASC`)
 	})
 
 	registerAdminDataRoutes(hsrv, database)
+	registerFortuneAdminRoutes(hsrv, database)
+	registerScheduleGridAdminRoutes(hsrv, database)
+
+	hsrv.HandleFunc("/v1/admin/leads", func(writer http.ResponseWriter, request *http.Request) {
+		if request.Method != http.MethodGet {
+			writeJSON(writer, http.StatusMethodNotAllowed, map[string]string{"error": "method_not_allowed"})
+			return
+		}
+		rows, err := database.Query(`
+SELECT ` + dbschema.LeadWideSelectColumns + `
+FROM client_leads
+ORDER BY updated_at DESC
+LIMIT 200`)
+		if err != nil {
+			writeJSON(writer, http.StatusInternalServerError, map[string]string{"error": "query_failed"})
+			return
+		}
+		defer rows.Close()
+		items := []map[string]any{}
+		for rows.Next() {
+			row, err := dbschema.ScanClientLeadWideRow(rows)
+			if err != nil {
+				writeJSON(writer, http.StatusInternalServerError, map[string]string{"error": "scan_failed"})
+				return
+			}
+			items = append(items, row)
+		}
+		writeJSON(writer, http.StatusOK, map[string]any{"items": items})
+	})
 
 	hsrv.HandleFunc("/healthz", func(writer http.ResponseWriter, request *http.Request) {
 		writeJSON(writer, http.StatusOK, map[string]string{"service": "admin-svc", "status": "ok"})

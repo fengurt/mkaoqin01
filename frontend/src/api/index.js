@@ -33,6 +33,25 @@ export const getScheduleQuick = () => api.get('/v1/catalog/schedule-quick')
 export const getScheduleDayOptions = () => api.get('/v1/schedule/day-options')
 export const getScheduleDay = (userId, date) => api.get('/v1/schedule/day', { params: { userId, date } })
 export const setScheduleDay = (payload) => api.post('/v1/schedule/day', payload)
+export const getScheduleMonth = (userId, month) =>
+  api.get('/v1/schedule/month', { params: { userId, month } })
+
+export const getFortuneDay = (userId, date) => api.get('/v1/fortune/day', { params: { userId, date } })
+export const getFortuneMonth = (userId, from, to) =>
+  api.get('/v1/fortune/month', { params: { userId, from, to } })
+export const getAdminFortuneMonth = (userId, from, to) =>
+  api.get('/v1/admin/fortune/month', { params: { userId, from, to } })
+export const uploadAdminFortune = (formData) =>
+  api.post('/v1/admin/fortune/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+export const assignAdminFortune = (payload) => api.post('/v1/admin/fortune/assign', payload)
+export const syncAdminFortune = (payload) => api.post('/v1/admin/fortune/sync', payload)
+
+/** 班次网格导出（JSON 对象，由前端触发下载） */
+export const exportAdminScheduleGrid = (from, to) =>
+  api.get('/v1/admin/schedule/grid/export', { params: { from, to } })
+export const importAdminScheduleGrid = (payload) => api.post('/v1/admin/schedule/grid/import', payload)
 
 export const getAdminLocationCatalog = (params) => {
   const useParams = params && typeof params === 'object' && Object.keys(params).length > 0
@@ -56,3 +75,12 @@ export const getAdminShiftTypes = () => api.get('/v1/admin/data/shift-types')
 export const upsertAdminShiftType = (payload) => api.post('/v1/admin/data/shift-types/upsert', payload)
 export const getAdminActivityTypes = () => api.get('/v1/admin/data/activity-types')
 export const upsertAdminActivityType = (payload) => api.post('/v1/admin/data/activity-types/upsert', payload)
+
+export const getRewardsMe = (userId) => api.get('/v1/rewards/me', { params: { userId } })
+export const acknowledgeBadges = (payload) => api.post('/v1/rewards/ack', payload)
+export const getLeadFeed = (userId) => api.get('/v1/leads/feed', { params: { userId } })
+export const getLeadDetail = (userId, leadId) =>
+  api.get('/v1/leads/detail', { params: { userId, leadId } })
+export const pickUpLead = (payload) => api.post('/v1/leads/pick-up', payload)
+export const followUpLead = (payload) => api.post('/v1/leads/follow-up', payload)
+export const getAdminLeads = () => api.get('/v1/admin/leads')

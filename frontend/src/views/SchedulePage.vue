@@ -5,6 +5,21 @@
     </header>
 
     <main class="content">
+      <section class="card shift-card" aria-label="当日班次">
+        <div class="shift-card-head">
+          <h2 class="card-title shift-card-title">{{ shiftSectionTitle }}</h2>
+          <small class="shift-card-hint">{{ daySchedule?.mode === 'leave' ? '休假模式' : '常规班次' }}</small>
+        </div>
+        <button
+          type="button"
+          class="shift-schedule-pill"
+          :title="daySchedule?.mode === 'leave' ? '当日休假类型，点击更改' : '当日常规班班次（与后台班次一致），点击更改'"
+          @click="showSchedulePicker = true"
+        >
+          {{ schedulePillLabel }}
+        </button>
+      </section>
+
       <section class="card calendar-card">
         <div class="calendar-toolbar">
           <button type="button" class="week-nav-btn" aria-label="上一周" @click="shiftWeek(-1)">
@@ -39,14 +54,6 @@
         <div class="timeline-head timeline-head-compact">
           <div class="timeline-head-left">
             <h2 class="card-title timeline-title">时间轴</h2>
-            <button
-              type="button"
-              class="work-hours-pill"
-              :title="daySchedule?.mode === 'leave' ? '当日休假类型，点击更改' : '当日常规班班次（与后台班次一致），点击更改'"
-              @click="showSchedulePicker = true"
-            >
-              {{ schedulePillLabel }}
-            </button>
           </div>
           <div class="timeline-head-right">
             <div class="timeline-actions">
@@ -142,11 +149,11 @@
       </div>
     </van-popup>
 
-    <van-calendar
-      v-model:show="showMonthCalendar"
-      :min-date="minCalendarDate"
-      :max-date="maxCalendarDate"
-      :default-date="calendarDefaultDate"
+    <ScheduleMonthCalendarPopup
+      v-model="showMonthCalendar"
+      :user-id="Number(user.id) || 1"
+      :initial-date="selectedDate"
+      title="选择行程日期"
       @confirm="onCalendarConfirm"
     />
 
@@ -167,13 +174,15 @@ import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { showFailToast, showLoadingToast, showSuccessToast, closeToast } from 'vant'
 import AppBottomNav from '../components/AppBottomNav.vue'
 import DailySchedulePicker from '../components/DailySchedulePicker.vue'
+import ScheduleMonthCalendarPopup from '../components/ScheduleMonthCalendarPopup.vue'
 import { getAttendanceByDate, getScheduleDay, getScheduleQuick, recognizeVoice, submitStatus } from '../api'
+import { toLocalYMD } from '../lib/fortuneUtils'
 import { REGION_HOTEL_TITLE } from '../composables/useLocationCatalog'
 import { STATUS_LABEL, normalizeAttendanceRecord } from '../data/models'
 
 const user = JSON.parse(localStorage.getItem('user') || '{"id":1}')
 const records = ref([])
-const selectedDate = ref(new Date().toISOString().slice(0, 10))
+const selectedDate = ref(toLocalYMD(new Date()))
 const showCreate = ref(false)
 const selectionStart = ref('')
 const selectionEnd = ref('')
@@ -219,6 +228,11 @@ const schedulePillLabel = computed(() => {
     return `常规班-${nm} ${ds.startTime}–${ds.endTime}`
   }
   return '常规班（点击设置）'
+})
+
+const shiftSectionTitle = computed(() => {
+  const todayStr = toLocalYMD(new Date())
+  return selectedDate.value === todayStr ? '今日班次' : '当日班次'
 })
 
 const scheduleQuickSections = ref([])
@@ -278,16 +292,6 @@ const applyCatalogItem = (item) => {
 /** 时间轴展示与「保存事项」唯一数据源：服务端 attendance_records（getAttendanceByDate / submitStatus）。 */
 const timelineAxisRef = ref(null)
 const showMonthCalendar = ref(false)
-
-const minCalendarDate = new Date(new Date().getFullYear() - 1, 0, 1)
-const maxCalendarDate = new Date(new Date().getFullYear() + 1, 11, 31)
-
-const toLocalYMD = (date) => {
-  const y = date.getFullYear()
-  const mo = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${y}-${mo}-${day}`
-}
 
 const periodPresetsLive = computed(() => {
   const ds = daySchedule.value
@@ -455,8 +459,6 @@ const formattedYmd = computed(() => {
   return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 ${dow}`
 })
 
-const calendarDefaultDate = computed(() => new Date(`${selectedDate.value}T12:00:00`))
-
 const weekStartStr = computed(() => {
   const d = new Date(`${selectedDate.value}T12:00:00`)
   const day = d.getDay()
@@ -540,10 +542,8 @@ const shiftWeek = async (weekDelta) => {
   await applyDateChange()
 }
 
-const onCalendarConfirm = async (value) => {
-  const d = value instanceof Date ? value : new Date(value)
-  selectedDate.value = toLocalYMD(d)
-  showMonthCalendar.value = false
+const onCalendarConfirm = async (ymd) => {
+  selectedDate.value = ymd
   await applyDateChange()
 }
 
@@ -691,6 +691,33 @@ onUnmounted(() => {
 }
 .topbar-title { margin:0; font-size:20px; font-weight:700; color:#0f172a; }
 .content { padding: 10px 12px var(--app-nav-clearance); display:flex; flex-direction:column; gap:8px; }
+.shift-card { padding:10px 12px; }
+.shift-card-head {
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:8px;
+}
+.shift-card-title { margin:0; font-size:15px; }
+.shift-card-hint { font-size:11px; color:#64748b; flex-shrink:0; }
+.shift-schedule-pill {
+  display:block;
+  width:100%;
+  text-align:left;
+  font-size:12px;
+  font-weight:700;
+  color:var(--brand-primary-mid,#2563eb);
+  background:var(--brand-primary-soft,#eff6ff);
+  border:1px solid #bfdbfe;
+  border-radius:12px;
+  padding:10px 12px;
+  line-height:1.4;
+  cursor:pointer;
+  font-family:inherit;
+  -webkit-tap-highlight-color:transparent;
+}
+.shift-schedule-pill:active { filter:brightness(0.97); }
 .calendar-card { padding:10px 8px 12px; }
 .calendar-toolbar {
   display:flex;

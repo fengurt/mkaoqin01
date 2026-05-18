@@ -95,3 +95,27 @@ Done - `npm run build` OK。
 24. schedule-shift-ux-dev-up-admin - Done
 Done - `scripts/dev-up.sh`: list ports、仅清理本仓库占用进程、占用仍存则退出、`curl` 等待 gateway `/healthz`；行程时间轴右侧药丸展示 `常规班-{名称} {时段}`；`DailySchedulePicker` 改为常规班/休假两段下拉（Picker）；`GET` pillText 与休假前缀文案对齐；管理员页 `/me/schedule-types-config` 维护 `shift_types`/`activity_types`；`npm run build` + `go build` attendance OK。
 Done - 数据库仍由 `dbschema` 引导；OFFICE 与迁移逻辑不变。
+
+25. rewards-leads-i18n-home - Done
+Done - `dbschema` 增加 `rewards.sql`（badge_definitions / user_streaks / user_badges）与 `leads.sql`（client_leads / events + DEMO 种子）；attendance：`processRewardsAfterSubmit` 在 CHECK_IN/CHECK_OUT 后更新连击并返回 `newlyEarnedBadges`；`/v1/rewards/me`、`/v1/rewards/ack`、`/v1/leads/*`；admin `GET /v1/admin/leads`；gateway 代理；前端 `vue-i18n` + `locales/zh-CN|en`、`BadgeCelebration`（confetti）、首页线索磁贴、`LeadFeedView`/`LeadDetailView`、`MyBadgesView`、`AdminLeadsView`、我的页语言 ActionSheet。
+Done - `npm run build` 与 `go build`（auth/attendance/admin/gateway）通过。
+
+26. rewards-leads-docs-ux-polish - Done
+Done - `.gitignore` 增加 `*.db-shm`/`*.db-wal`；`DATA_SYNC.md` 与 `README.md` 补充 rewards/leads 表说明与网关路由；`postgresql.sql` 对 `badge_definitions` 增加与 SQLite 一致的 `ON CONFLICT DO NOTHING` 种子；`LeadDetailView` 仅在 `assignedUserId`/`pickedUpBy` 与当前用户一致时显示跟进表单，否则展示 i18n 提示。
+Done - `npm run build` 通过。
+
+27. sqlite-integrity-schema-guards - Done
+Done - `dbschema.VerifySQLitePostApply`：`PRAGMA foreign_key_check` + `PRAGMA quick_check`；`MigrateSQLiteLegacy` 末尾 `migrateRewardsLeadsReferentialSanity` 清理孤儿行并钳位 streak；`ApplySQLite` 在迁移后执行校验；PostgreSQL DDL 为 `badge_definitions`/`user_streaks`/`client_leads` 增加 CHECK；线索 `follow-up` 校验 `statusTo` 枚举；`app/attendance/schema_verify_test.go` 内存库冒烟。
+Done - `go test ./...`（attendance 模块）与 `go build` dbschema 消费方通过。
+
+28. macau-leads-editorial-ui - Done
+Done - `client_leads` 扩展（纯新客/老客激活、来源地、MGM 场域、渠道、参考字段）+ `migrateClientLeadColumns`；`dbschema.LeadWideSelectColumns` 与 `ScanClientLeadWideRow` 共用；attendance `/v1/leads/*` 与 admin `/v1/admin/leads` 输出新字段；H5 `style.css`/`index.html` 字体与「Macau IR editorial」色板，`HomePage`/`Lead*`/`AdminLeadsView` 与 i18n 展示。
+Done - `go test`（attendance）、`npm run build` 通过。
+
+29. leads-value-radar-visual - Done
+Done - `frontend/src/lib/leadValuePotential.js`：六维 0–100 规则算法 + 加权潜力指数；`LeadValueRadarChart.vue` SVG 雷达；`LeadFeedView` 卡片化列表 + 迷你雷达与潜力分；`LeadDetailView` 雷达 + 条形维度分解；首页线索磁贴展示潜力芯片；`zh-CN`/`en`/`README` 说明。
+Done - `npm run build` 通过。
+
+30. fortune-calendar-schedule-grid-io - Done
+Done - `user_daily_fortune` + attendance `/v1/fortune/day|month`、静态 `/uploads/fortune/`；admin 上传/assign/sync；`GET /v1/schedule/month`；admin `schedule/grid/export|import`（含 Chronoscape `20260517.json` 对齐）；gateway 代理与 multipart 转发；前端 `FortuneCalendarPopup`、`AdminEmployeeFortuneView`（`/me/accounts/:userId/fortune`）、行程月历班次 `bottomInfo`、团队考勤班次 JSON 导入导出。
+Done - `go build`（attendance/admin/gateway/dbschema）与 `npm run build` 通过。

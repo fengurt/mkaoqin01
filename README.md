@@ -14,6 +14,22 @@
 - admin-svc: dashboard APIs (`:8004`)
 - frontend: H5 (`:5173`)
 
+### Gateway: rewards & client leads (JWT `Authorization: Bearer`)
+
+| Method | Path | Notes |
+|--------|------|--------|
+| GET | `/v1/rewards/me` | Query `userId` |
+| POST | `/v1/rewards/ack` | JSON `{ "userId", "badgeIds": [] }` |
+| GET | `/v1/leads/feed` | Query `userId` |
+| GET | `/v1/leads/detail` | Query `userId`, `leadId` |
+| POST | `/v1/leads/pick-up` | JSON `{ "leadId", "userId" }` |
+| POST | `/v1/leads/follow-up` | JSON `{ "leadId", "userId", "note", "statusTo?" }` — server allows update only if `userId` matches `assigned_user_id` or `picked_up_by` |
+| GET | `/v1/admin/leads` | **Admin** JWT only; list leads |
+
+SQLite 每次服务启动会执行 `dbschema.ApplySQLite`：迁移后跑 **`PRAGMA foreign_key_check`** 与 **`PRAGMA quick_check`**；详见 [`data/DATA_SYNC.md`](data/DATA_SYNC.md)「Post-apply integrity」。
+
+线索 **高价值潜力雷达**（六维规则评分 + SVG 雷达图）由前端 [`frontend/src/lib/leadValuePotential.js`](frontend/src/lib/leadValuePotential.js) 计算，可在后续与 CRM 规则对齐后迁到服务端。
+
 ## Quick start
 1. Copy env:
    - `cp .env.example .env`
@@ -39,18 +55,30 @@
 5. Stop:
    - `docker compose down`
 
-## Docker production profile
+## Docker production profile (AMD64 Linux server)
+See **[deploy/DEPLOY_AMD.md](deploy/DEPLOY_AMD.md)** for full server steps.
+
 1. Prepare env:
    - `cp .env.example .env`
-   - Optional: `HTTP_PORT=80`
-2. Start production stack:
-   - `docker compose -f docker-compose.prod.yml up --build -d`
+   - Set `JWT_SECRET` (and AI keys). Optional: `HTTP_PORT=80`
+2. On server after `git clone`:
+   - `bash scripts/deploy-amd-prod.sh`
+   - Or: `docker compose -f docker-compose.prod.yml up --build -d`
 3. Check:
    - `docker compose -f docker-compose.prod.yml ps`
 4. Access:
    - `http://<server-ip>:${HTTP_PORT:-80}`
 5. Stop:
    - `docker compose -f docker-compose.prod.yml down`
+
+### SQLite sync (local ↔ server)
+One file per deployment: `data/intervoice.db`. See **[data/DATA_SYNC.md](data/DATA_SYNC.md)**.
+
+- **Full file copy** (simplest): stop stack, copy DB, start stack:
+  - `bash scripts/db-sync.sh push user@host:/opt/mkaoqin01`
+  - `bash scripts/db-sync.sh pull user@host:/opt/mkaoqin01`
+- **Schedules only**: export/import JSON in 团队考勤 → 班次导入/导出 (admin), or `GET/POST /v1/admin/schedule/grid/export|import`.
+- **Selective rows**: admin JWT + `/v1/admin/data/*` or MCP (`scripts/mcp-intervoice-admin`).
 
 ## Coolify deployment (recommended bundle)
 Use a single Docker Compose stack in Coolify with:

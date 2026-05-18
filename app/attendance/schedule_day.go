@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	khttp "github.com/go-kratos/kratos/v2/transport/http"
 )
@@ -69,6 +70,96 @@ func registerScheduleDayRoutes(hsrv *khttp.Server, database *sql.DB) {
 			writeJSON(writer, http.StatusMethodNotAllowed, map[string]string{"error": "method_not_allowed"})
 		}
 	})
+
+	hsrv.HandleFunc("/v1/schedule/month", func(writer http.ResponseWriter, request *http.Request) {
+		if request.Method != http.MethodGet {
+			writeJSON(writer, http.StatusMethodNotAllowed, map[string]string{"error": "method_not_allowed"})
+			return
+		}
+		userIDStr := request.URL.Query().Get("userId")
+		yearMonth := strings.TrimSpace(request.URL.Query().Get("month"))
+		if yearMonth == "" {
+			now := time.Now()
+			yearMonth = now.Format("2006-01")
+		}
+		if len(yearMonth) != 7 || yearMonth[4] != '-' {
+			writeJSON(writer, http.StatusBadRequest, map[string]string{"error": "invalid month"})
+			return
+		}
+		userID := int64(1)
+		if userIDStr != "" {
+			parsed, err := strconv.ParseInt(userIDStr, 10, 64)
+			if err != nil || parsed < 1 {
+				writeJSON(writer, http.StatusBadRequest, map[string]string{"error": "invalid userId"})
+				return
+			}
+			userID = parsed
+		}
+		from := yearMonth + "-01"
+		toTime, err := time.Parse("2006-01-02", from)
+		if err != nil {
+			writeJSON(writer, http.StatusBadRequest, map[string]string{"error": "invalid month"})
+			return
+		}
+		to := time.Date(toTime.Year(), toTime.Month()+1, 0, 0, 0, 0, 0, toTime.Location()).Format("2006-01-02")
+		rows, err := database.Query(`
+SELECT work_date, mode, code FROM user_daily_schedule
+WHERE user_id = ? AND work_date >= ? AND work_date <= ?
+ORDER BY work_date ASC`, userID, from, to)
+		if err != nil {
+			writeJSON(writer, http.StatusInternalServerError, map[string]string{"error": "query_failed"})
+			return
+		}
+		defer rows.Close()
+		days := map[string]any{}
+		for rows.Next() {
+			var workDate, mode, code string
+			if err := rows.Scan(&workDate, &mode, &code); err != nil {
+				writeJSON(writer, http.StatusInternalServerError, map[string]string{"error": "scan_failed"})
+				return
+			}
+			payload, err := resolveUserDailySchedule(database, userID, workDate)
+			if err != nil {
+				writeJSON(writer, http.StatusInternalServerError, map[string]string{"error": "resolve_failed"})
+				return
+			}
+			short := scheduleShortLabel(payload)
+			days[workDate] = map[string]any{
+				"mode": payload["mode"], "code": payload["code"],
+				"shortLabel": short, "calendarLabel": scheduleCalendarLabel(payload),
+				"pillText": payload["pillText"],
+				"startTime": payload["startTime"], "endTime": payload["endTime"],
+			}
+		}
+		writeJSON(writer, http.StatusOK, map[string]any{"userId": userID, "month": yearMonth, "days": days})
+	})
+}
+
+func scheduleShortLabel(payload map[string]any) string {
+	return scheduleCalendarLabel(payload)
+}
+
+func scheduleCalendarLabel(payload map[string]any) string {
+	mode, _ := payload["mode"].(string)
+	code, _ := payload["code"].(string)
+	code = strings.TrimSpace(code)
+	if mode == "leave" {
+		if code != "" {
+			return code
+		}
+		return "休"
+	}
+	if code == "STANDBY24" {
+		return "24h待命"
+	}
+	if code != "" {
+		return code
+	}
+	label, _ := payload["label"].(string)
+	if label != "" {
+		return label
+	}
+	return "班"
 }
 
 func handleScheduleDayGet(writer http.ResponseWriter, request *http.Request, database *sql.DB) {

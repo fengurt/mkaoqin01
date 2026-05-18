@@ -6,3 +6,11 @@ frontend/dist/
 dist/
 *.log
 .DS_Store
+*.db-shm
+*.db-wal
+data/*.db
+app/auth/auth
+app/admin/admin
+app/attendance/attendance
+app/gateway/gateway
+app/voice/voice
