@@ -49,43 +49,29 @@
             <span class="metro-tile-label">快捷申报</span>
             <span class="metro-tile-live">{{ reportSubtitle }}</span>
           </button>
-          <button type="button" class="metro-tile metro-tile--luck metro-tile--wide" @click="openFortunePoster">
+          <button type="button" class="metro-tile metro-tile--lead" @click="goLeads">
+            <span class="metro-tile-ico material-symbols-outlined" aria-hidden="true">contact_phone</span>
+            <span class="metro-tile-label">{{ t('home.leadTileTitle') }}</span>
+            <span class="metro-tile-live">{{ leadSubtitle }}</span>
+            <p v-if="leadPreview" class="metro-lead-name">{{ leadPreview.clientName }}</p>
+            <div v-if="leadPreview" class="metro-lead-chips" aria-label="线索摘要">
+              <span v-if="leadPreview.leadSegment" class="metro-lead-chip">{{ t(`lead.segment.${leadPreview.leadSegment}`) }}</span>
+              <span v-if="leadPreview.approxOriginRegion" class="metro-lead-chip metro-lead-chip--muted">{{
+                t(`lead.origin.${leadPreview.approxOriginRegion}`)
+              }}</span>
+              <span v-if="leadPreview.preferredVenue" class="metro-lead-chip metro-lead-chip--gold">{{
+                t(`lead.venue.${leadPreview.preferredVenue}`)
+              }}</span>
+              <span v-if="leadPotentialComposite != null" class="metro-lead-chip metro-lead-chip--score"
+                >{{ t('lead.radar.compositeShort') }} {{ leadPotentialComposite }}</span
+              >
+            </div>
+          </button>
+          <button type="button" class="metro-tile metro-tile--luck" @click="openFortunePoster">
             <span class="metro-tile-ico material-symbols-outlined" aria-hidden="true">auto_awesome</span>
             <span class="metro-tile-label">今日好运</span>
             <p class="metro-fortune">{{ fortuneLine }}</p>
           </button>
-        </div>
-      </section>
-
-      <section class="metro-pivot" aria-label="今日班次">
-        <div class="metro-pivot-head">
-          <span>今日班次</span>
-          <small>{{ reportSchedule?.mode === 'leave' ? '休假模式' : '常规班次' }}</small>
-        </div>
-        <div class="today-shift-row">
-          <button type="button" class="report-schedule-pill" @click="showReportSchedulePicker = true">
-            {{ reportSchedule?.pillText || '点击确认当日排班' }}
-          </button>
-        </div>
-      </section>
-
-      <section class="metro-pivot" aria-label="今日实况">
-        <div class="metro-pivot-head">
-          <span>实况</span>
-          <small>{{ records.length }} 条 · 高频 {{ topActionLabel }}</small>
-        </div>
-        <div class="metro-pivot-track">
-          <div v-if="sortedSummary.length" class="metro-chips">
-            <span v-for="item in sortedSummary" :key="item.key" class="metro-chip">{{ item.label }} ×{{ item.count }}</span>
-          </div>
-          <p v-if="records.length === 0" class="metro-pivot-empty">今日尚无记录 · 试一下左侧上班打卡或快捷申报</p>
-          <div v-else class="metro-cards">
-            <article v-for="record in records" :key="record.id" class="metro-mini-card">
-              <time class="metro-mini-time">{{ formatClock(record.occurredAt) }}</time>
-              <p class="metro-mini-title">{{ record.statusLabel }}</p>
-              <p class="metro-mini-meta">{{ record.location }}</p>
-            </article>
-          </div>
         </div>
       </section>
     </main>
@@ -225,28 +211,37 @@
       @applied="onReportScheduleApplied"
     />
 
-    <van-popup v-model:show="showFortunePoster" round :style="{ width: '92%', maxWidth: '420px' }">
-      <div class="fortune-modal">
-        <img v-if="activeFortuneImageSrc" :src="activeFortuneImageSrc" alt="今日好运签" class="fortune-image" @error="onFortuneImageError" />
-        <p class="fortune-fallback" v-else>{{ fortuneLine }}</p>
-      </div>
-    </van-popup>
+    <FortuneCalendarPopup
+      v-model="showFortuneCalendar"
+      :user-id="Number(user.id) || 1"
+      :initial-date="form.date"
+      title="今日好运"
+    />
 
     <AppBottomNav />
+    <BadgeCelebration ref="badgeCelebrationRef" />
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { showConfirmDialog, showFailToast, showSuccessToast } from 'vant'
+import { useRouter } from 'vue-router'
 import AppBottomNav from '../components/AppBottomNav.vue'
+import BadgeCelebration from '../components/BadgeCelebration.vue'
 import CatalogIntroPopup from '../components/CatalogIntroPopup.vue'
 import DailySchedulePicker from '../components/DailySchedulePicker.vue'
-import { getAttendanceByDate, getScheduleDay, submitStatus } from '../api'
+import FortuneCalendarPopup from '../components/FortuneCalendarPopup.vue'
+import { getAttendanceByDate, getFortuneDay, getLeadFeed, getScheduleDay, submitStatus } from '../api'
+import { computeLeadValueRadar } from '../lib/leadValuePotential'
 import { REGION_HOTEL_TITLE, useLocationCatalog } from '../composables/useLocationCatalog'
-import { formatClock, normalizeAttendanceRecord, STATUS_LABEL } from '../data/models'
+import { normalizeAttendanceRecord } from '../data/models'
 
 const REPORT_STATUSES = ['OFFICE', 'OUTING', 'DINING', 'BUSINESS_TRIP']
+
+const { t } = useI18n()
+const router = useRouter()
 
 const user = JSON.parse(localStorage.getItem('user') || '{"id":1}')
 const records = ref([])
@@ -267,13 +262,44 @@ const homeBootstrapping = ref(true)
 const reportBusy = ref(false)
 const clockOutBusy = ref(false)
 const checkInBusy = ref(false)
-const showFortunePoster = ref(false)
-const activeFortuneImageSrc = ref('')
-const fortuneImageOrder = ref([])
-const fortuneImageCursor = ref(0)
+const showFortuneCalendar = ref(false)
+const todayFortuneCaption = ref('')
 
 const reportSchedule = ref(null)
 const showReportSchedulePicker = ref(false)
+
+const badgeCelebrationRef = ref(null)
+const leadPreview = ref(null)
+
+const leadSubtitle = computed(() => {
+  if (!leadPreview.value) return t('home.leadTileEmpty')
+  return `${t('home.leadCreated')}: ${(leadPreview.value.createdAt || '').slice(0, 16)}`
+})
+
+const leadPotentialComposite = computed(() => {
+  if (!leadPreview.value) return null
+  return computeLeadValueRadar(leadPreview.value).composite
+})
+
+const loadLeadPreview = async () => {
+  try {
+    const { data } = await getLeadFeed(user.id || 1)
+    const items = data.items || []
+    leadPreview.value = items[0] || null
+  } catch {
+    leadPreview.value = null
+  }
+}
+
+const goLeads = () => {
+  router.push('/leads')
+}
+
+const playNewBadges = (list) => {
+  if (Array.isArray(list) && list.length > 0) {
+    badgeCelebrationRef.value?.play(list)
+  }
+}
 
 const loadReportSchedule = async () => {
   try {
@@ -315,56 +341,24 @@ const isSameLocalDay = (occurredAtIso, ymd) => {
 }
 
 const fortuneLine = computed(() => {
+  if (todayFortuneCaption.value) return todayFortuneCaption.value
   const seed = [...todayText()].reduce((acc, character) => acc + character.charCodeAt(0), 0)
   const uid = Number(user.id) || 0
   const index = (seed + uid) % FORTUNE_LINES.length
   return FORTUNE_LINES[index]
 })
 
-const FORTUNE_IMAGE_FILES = [
-  '/fortune/___01-_____Medium-4ade1249-5ee2-4aa0-9ba4-3af93ea68817.png',
-  '/fortune/___02-_____Medium-42139af7-913e-4f1b-a43b-6bf513e2cab3.png',
-  '/fortune/___03-_____Medium-5a78044d-409a-44f7-914b-edab5b4ee6b4.png',
-  '/fortune/___04-_____Medium-340c1d61-0cd5-49a2-a239-94130f251357.png',
-  '/fortune/___05-______Medium-2918e36a-1bf9-4ba4-bcbe-609d7e127020.png',
-  '/fortune/___06-_____Medium-a7e33781-73b4-493c-91b1-97632ebcf47c.png',
-  '/fortune/___07-_____Medium-275f5415-8209-43d1-bce4-f172667bc1c8.png',
-  '/fortune/___08-_____Medium-c737a7d6-13ef-4c13-b864-4bfc1e9a786d.png',
-  '/fortune/___09-_____Medium-860fbd8b-73b5-4fa6-acbf-5e06eeea4b0f.png',
-  '/fortune/___10-_____Medium-0f6b40c7-c5c0-4d26-b70e-96da90763da0.png',
-]
-
-const pickRandomFortuneImage = () => {
-  if (!FORTUNE_IMAGE_FILES.length) return ''
-  const randomIndex = Math.floor(Math.random() * FORTUNE_IMAGE_FILES.length)
-  return FORTUNE_IMAGE_FILES[randomIndex]
-}
-
-const buildFortuneImageOrder = () => {
-  const list = [...FORTUNE_IMAGE_FILES]
-  for (let i = list.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1))
-    const temp = list[i]
-    list[i] = list[j]
-    list[j] = temp
+const loadTodayFortune = async () => {
+  try {
+    const { data } = await getFortuneDay(user.id || 1, form.date)
+    todayFortuneCaption.value = data.caption || ''
+  } catch {
+    todayFortuneCaption.value = ''
   }
-  return list
 }
 
 const openFortunePoster = () => {
-  fortuneImageOrder.value = buildFortuneImageOrder()
-  fortuneImageCursor.value = 0
-  activeFortuneImageSrc.value = fortuneImageOrder.value[0] || pickRandomFortuneImage()
-  showFortunePoster.value = true
-}
-
-const onFortuneImageError = () => {
-  fortuneImageCursor.value += 1
-  if (fortuneImageCursor.value < fortuneImageOrder.value.length) {
-    activeFortuneImageSrc.value = fortuneImageOrder.value[fortuneImageCursor.value]
-    return
-  }
-  activeFortuneImageSrc.value = ''
+  showFortuneCalendar.value = true
 }
 
 const tagOptions = [
@@ -475,17 +469,6 @@ const clockOutBlockedHint = computed(() => {
   return '随时可以快乐下班'
 })
 
-const sortedSummary = computed(() => {
-  const counter = {}
-  records.value.forEach((row) => {
-    counter[row.status] = (counter[row.status] || 0) + 1
-  })
-  return Object.entries(counter)
-    .map(([status, count]) => ({ key: status, label: STATUS_LABEL[status] || status, count }))
-    .sort((left, right) => right.count - left.count)
-})
-const topActionLabel = computed(() => sortedSummary.value[0]?.label || '无')
-
 const occurredAtForFormDate = () => {
   const now = new Date()
   const hh = String(now.getHours()).padStart(2, '0')
@@ -580,21 +563,26 @@ const submitReport = async () => {
 
   reportBusy.value = true
   try {
+    const earnedBatch = []
     for (let i = 0; i < payloadLines.length; i += 1) {
       const line = payloadLines[i]
       const tag = tagOptions[line.tagIndex]
       const reasonText = [scheduleReasonPrefix.value, line.reason].filter(Boolean).join(' ').trim()
-      await submitStatus({
+      const { data } = await submitStatus({
         userId: user.id || 1,
         status: tag.status,
         location: resolveLineLocation(tag, line),
         reason: reasonText,
         occurredAt: bumpOccurredAtLocal(baseOccurredAt, i),
       })
+      if (Array.isArray(data?.newlyEarnedBadges)) {
+        earnedBatch.push(...data.newlyEarnedBadges)
+      }
     }
     reportSaved.value = true
     showSuccessToast(payloadLines.length > 1 ? `已保存 ${payloadLines.length} 条申报` : '申报已保存')
     await loadRecords()
+    playNewBadges(earnedBatch)
   } catch {
     showFailToast('保存失败，请重试')
   } finally {
@@ -609,7 +597,7 @@ const submitClockOutFromModal = async () => {
   }
   clockOutBusy.value = true
   try {
-    await submitStatus({
+    const { data } = await submitStatus({
       userId: user.id || 1,
       status: 'CHECK_OUT',
       location: form.location.trim() || '公司',
@@ -619,6 +607,7 @@ const submitClockOutFromModal = async () => {
     showSuccessToast('下班打卡成功')
     showReportModal.value = false
     await loadRecords()
+    playNewBadges(data?.newlyEarnedBadges)
   } catch {
     showFailToast('打卡失败，请重试')
   } finally {
@@ -653,7 +642,7 @@ const handleCheckIn = async () => {
 
   checkInBusy.value = true
   try {
-    await submitStatus({
+    const { data } = await submitStatus({
       userId: user.id || 1,
       status: 'CHECK_IN',
       location: '公司',
@@ -662,6 +651,7 @@ const handleCheckIn = async () => {
     })
     showSuccessToast(isLate ? '上班打卡成功（今日已迟到）' : '上班打卡成功（今日正常上班）')
     await loadRecords()
+    playNewBadges(data?.newlyEarnedBadges)
   } catch {
     showFailToast('打卡失败，请重试')
   } finally {
@@ -705,7 +695,7 @@ const handleClockOut = async () => {
 
   clockOutBusy.value = true
   try {
-    await submitStatus({
+    const { data } = await submitStatus({
       userId: user.id || 1,
       status: 'CHECK_OUT',
       location: '公司',
@@ -714,6 +704,7 @@ const handleClockOut = async () => {
     })
     showSuccessToast('下班打卡成功')
     await loadRecords()
+    playNewBadges(data?.newlyEarnedBadges)
   } catch {
     showFailToast('打卡失败，请重试')
   } finally {
@@ -735,10 +726,16 @@ watch(
   },
 )
 
+watch(() => form.date, () => {
+  loadTodayFortune()
+})
+
 onMounted(async () => {
   loadLocationCatalog()
   await loadRecords()
   await loadReportSchedule()
+  await loadLeadPreview()
+  await loadTodayFortune()
 })
 </script>
 
@@ -752,9 +749,11 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  padding: 14px 16px 10px;
+  padding: 14px 16px 12px;
   background: var(--metro-header-bg);
   color: var(--metro-header-text);
+  border-bottom: 2px solid var(--accent-gold, #b8954f);
+  box-shadow: 0 12px 32px rgba(10, 12, 18, 0.35);
 }
 .metro-greet {
   margin: 0;
@@ -765,22 +764,23 @@ onMounted(async () => {
   display: block;
   margin-top: 2px;
   font-size: 22px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   font-variant-numeric: tabular-nums;
+  font-family: "Noto Serif SC", "Songti SC", serif;
 }
 .metro-top-links {
   display: flex;
   gap: 6px;
 }
 .metro-link.ghost {
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  background: transparent;
-  color: #fff;
+  border: 1px solid rgba(184, 149, 79, 0.45);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f7f3eb;
   font-size: 12px;
   font-weight: 600;
   padding: 6px 11px;
-  border-radius: 2px;
+  border-radius: 999px;
 }
 .metro-main {
   padding: 14px 14px calc(var(--app-nav-clearance) + 8px);
@@ -799,7 +799,7 @@ onMounted(async () => {
 }
 .metro-tile {
   border: 0;
-  border-radius: 2px;
+  border-radius: 16px;
   min-height: 104px;
   padding: 14px;
   display: flex;
@@ -809,6 +809,7 @@ onMounted(async () => {
   text-align: left;
   cursor: pointer;
   color: #fff;
+  box-shadow: 0 10px 26px rgba(15, 18, 26, 0.18);
 }
 .metro-tile:disabled {
   opacity: 0.55;
@@ -829,6 +830,62 @@ onMounted(async () => {
 }
 .metro-tile--luck {
   background: var(--metro-tile-luck);
+  min-height: 120px;
+}
+.metro-tile--lead {
+  min-height: 120px;
+  background: var(--metro-tile-lead, linear-gradient(142deg, #1a1816 0%, #2a2622 42%, #3a3228 100%));
+  border: 1px solid rgba(184, 149, 79, 0.35);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 12px 28px rgba(10, 10, 12, 0.45);
+}
+.metro-lead-name {
+  margin: 8px 0 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+  opacity: 0.96;
+  text-align: left;
+  max-height: 2.8em;
+  overflow: hidden;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+}
+.metro-lead-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.metro-lead-chip {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(247, 243, 235, 0.95);
+}
+.metro-lead-chip--muted {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+  opacity: 0.88;
+}
+.metro-lead-chip--gold {
+  background: rgba(184, 149, 79, 0.22);
+  border-color: rgba(184, 149, 79, 0.55);
+  color: #fdf6e4;
+}
+.metro-lead-chip--score {
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  background: rgba(253, 246, 228, 0.35);
+  border-color: rgba(253, 246, 228, 0.55);
 }
 .metro-tile-ico {
   font-size: 30px;
@@ -859,8 +916,9 @@ onMounted(async () => {
 }
 .metro-pivot {
   background: var(--metro-pivot-bg);
-  border-radius: 10px;
+  border-radius: 16px;
   border: 1px solid var(--brand-border);
+  box-shadow: 0 4px 18px rgba(20, 24, 33, 0.05);
 }
 .metro-pivot-head {
   display: flex;

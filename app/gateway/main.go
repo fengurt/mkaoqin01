@@ -37,15 +37,32 @@ func main() {
 	hsrv.HandleFunc("/v1/attendance/summary", withCORS(proxyGET(attendanceBaseURL+"/v1/attendance/summary", true)))
 	hsrv.HandleFunc("/v1/attendance/list", withCORS(proxyGET(attendanceBaseURL+"/v1/attendance/list", true)))
 	hsrv.HandleFunc("/v1/attendance/by-date", withCORS(proxyGET(attendanceBaseURL+"/v1/attendance/by-date", true)))
+	hsrv.HandleFunc("/v1/rewards/me", withCORS(proxyGET(attendanceBaseURL+"/v1/rewards/me", true)))
+	hsrv.HandleFunc("/v1/rewards/ack", withCORS(proxyJSON(attendanceBaseURL+"/v1/rewards/ack", true)))
+	hsrv.HandleFunc("/v1/leads/feed", withCORS(proxyGET(attendanceBaseURL+"/v1/leads/feed", true)))
+	hsrv.HandleFunc("/v1/leads/detail", withCORS(proxyGET(attendanceBaseURL+"/v1/leads/detail", true)))
+	hsrv.HandleFunc("/v1/leads/pick-up", withCORS(proxyJSON(attendanceBaseURL+"/v1/leads/pick-up", true)))
+	hsrv.HandleFunc("/v1/leads/follow-up", withCORS(proxyJSON(attendanceBaseURL+"/v1/leads/follow-up", true)))
 	hsrv.HandleFunc("/v1/catalog/locations", withCORS(proxyGET(attendanceBaseURL+"/v1/catalog/locations", true)))
 	hsrv.HandleFunc("/v1/catalog/schedule-quick", withCORS(proxyGET(attendanceBaseURL+"/v1/catalog/schedule-quick", false)))
 	// Catalog-only lists (shift_types / activity_types); same data as admin UI. Saving still requires JWT via POST /v1/schedule/day.
 	hsrv.HandleFunc("/v1/schedule/day-options", withCORS(proxyGET(attendanceBaseURL+"/v1/schedule/day-options", false)))
 	hsrv.HandleFunc("/v1/schedule/day", withCORS(proxyScheduleDay(attendanceBaseURL)))
+	hsrv.HandleFunc("/v1/schedule/month", withCORS(proxyGET(attendanceBaseURL+"/v1/schedule/month", true)))
+	hsrv.HandleFunc("/v1/fortune/day", withCORS(proxyGET(attendanceBaseURL+"/v1/fortune/day", true)))
+	hsrv.HandleFunc("/v1/fortune/month", withCORS(proxyGET(attendanceBaseURL+"/v1/fortune/month", true)))
+	hsrv.HandleFunc("/uploads/fortune/", withCORS(proxyUploadsFortune(attendanceBaseURL)))
+	hsrv.HandleFunc("/v1/admin/fortune/month", withCORS(proxyGET(adminBaseURL+"/v1/admin/fortune/month", true)))
+	hsrv.HandleFunc("/v1/admin/fortune/upload", withCORS(proxyMultipartForward(adminBaseURL+"/v1/admin/fortune/upload", true)))
+	hsrv.HandleFunc("/v1/admin/fortune/assign", withCORS(proxyJSON(adminBaseURL+"/v1/admin/fortune/assign", true)))
+	hsrv.HandleFunc("/v1/admin/fortune/sync", withCORS(proxyJSON(adminBaseURL+"/v1/admin/fortune/sync", true)))
+	hsrv.HandleFunc("/v1/admin/schedule/grid/export", withCORS(proxyGET(adminBaseURL+"/v1/admin/schedule/grid/export", true)))
+	hsrv.HandleFunc("/v1/admin/schedule/grid/import", withCORS(proxyJSON(adminBaseURL+"/v1/admin/schedule/grid/import", true)))
 	hsrv.HandleFunc("/v1/admin/board", withCORS(proxyGET(adminBaseURL+"/v1/admin/board", true)))
 	hsrv.HandleFunc("/v1/admin/summary", withCORS(proxyGET(adminBaseURL+"/v1/admin/summary", true)))
 	hsrv.HandleFunc("/v1/admin/report", withCORS(proxyGET(adminBaseURL+"/v1/admin/report", true)))
 	hsrv.HandleFunc("/v1/admin/team", withCORS(proxyGET(adminBaseURL+"/v1/admin/team", true)))
+	hsrv.HandleFunc("/v1/admin/leads", withCORS(proxyGET(adminBaseURL+"/v1/admin/leads", true)))
 	hsrv.HandleFunc("/v1/admin/data/meta", withCORS(proxyGET(adminBaseURL+"/v1/admin/data/meta", true)))
 	hsrv.HandleFunc("/v1/admin/data/schema", withCORS(proxyGET(adminBaseURL+"/v1/admin/data/schema", true)))
 	hsrv.HandleFunc("/v1/admin/data/users", withCORS(proxyGET(adminBaseURL+"/v1/admin/data/users", true)))
@@ -127,6 +144,53 @@ func proxyGET(targetURL string, authRequired bool) http.HandlerFunc {
 			requestURL = requestURL + "?" + queryString
 		}
 		targetRequest, _ := http.NewRequest(http.MethodGet, requestURL, nil)
+		if authRequired {
+			targetRequest.Header.Set("Authorization", request.Header.Get("Authorization"))
+		}
+		proxyRequest(writer, targetRequest)
+	}
+}
+
+func proxyUploadsFortune(attendanceBaseURL string) http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		target := attendanceBaseURL + request.URL.Path
+		if request.URL.RawQuery != "" {
+			target = target + "?" + request.URL.RawQuery
+		}
+		targetRequest, _ := http.NewRequest(request.Method, target, request.Body)
+		targetRequest.Header = request.Header.Clone()
+		proxyRequest(writer, targetRequest)
+	}
+}
+
+func proxyMultipartForward(targetURL string, authRequired bool) http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		if authRequired && !validateJWT(request) {
+			writeJSON(writer, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+			return
+		}
+		if err := request.ParseMultipartForm(16 << 20); err != nil {
+			writeJSON(writer, http.StatusBadRequest, map[string]string{"error": "invalid multipart request"})
+			return
+		}
+		var body bytes.Buffer
+		writerForm := multipart.NewWriter(&body)
+		for key, vals := range request.MultipartForm.Value {
+			if len(vals) > 0 {
+				_ = writerForm.WriteField(key, vals[0])
+			}
+		}
+		for field, headers := range request.MultipartForm.File {
+			for _, hdr := range headers {
+				file, _ := hdr.Open()
+				part, _ := writerForm.CreateFormFile(field, hdr.Filename)
+				_, _ = io.Copy(part, file)
+				_ = file.Close()
+			}
+		}
+		writerForm.Close()
+		targetRequest, _ := http.NewRequest(http.MethodPost, targetURL, &body)
+		targetRequest.Header.Set("Content-Type", writerForm.FormDataContentType())
 		if authRequired {
 			targetRequest.Header.Set("Authorization", request.Header.Get("Authorization"))
 		}

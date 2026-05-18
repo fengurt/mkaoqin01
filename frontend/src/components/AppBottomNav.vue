@@ -53,8 +53,8 @@ const activeTab = computed(() => {
   z-index: 60;
   min-height: calc(64px + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  border-top: 1px solid var(--brand-border, #e2e8f0);
-  background: rgba(255, 255, 255, 0.94);
+  border-top: 1px solid var(--brand-border, #d4cec2);
+  background: rgba(253, 251, 247, 0.94);
   backdrop-filter: blur(10px);
   display: flex;
   align-items: stretch;
@@ -88,7 +88,7 @@ const activeTab = computed(() => {
 }
 
 .app-nav-item.active {
-  color: var(--brand-primary-mid, #2563eb);
+  color: var(--accent-gold, #b8954f);
   font-weight: 700;
 }
 

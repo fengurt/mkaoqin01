@@ -1,0 +1,104 @@
+{
+  "home": {
+    "leadTileTitle": "客户线索",
+    "leadTileEmpty": "暂无待跟进线索",
+    "leadTileHint": "认领后及时回访",
+    "leadCreated": "创建",
+    "leadStatusNew": "待认领"
+  },
+  "badges": {
+    "celebrateTitle": "解锁奖励",
+    "celebrateSubtitle": "继续保持好习惯",
+    "gotIt": "知道了",
+    "kindUserBadge": "用户徽章",
+    "kindUserMedal": "荣誉奖章",
+    "kindAchievement": "成就徽章",
+    "kindMember": "会员徽章"
+  },
+  "lead": {
+    "title": "客户线索",
+    "pickUp": "认领线索",
+    "followUp": "写跟进",
+    "followUpLocked": "该线索尚未分配给你或未认领，请先认领后再写跟进。",
+    "notePlaceholder": "跟进内容（必填）",
+    "timeline": "动态",
+    "backHome": "返回首页",
+    "claimedAt": "认领时间",
+    "profileTitle": "线索画像",
+    "refTitle": "参考数据（老客激活）",
+    "segment": {
+      "NEW_PURE": "纯新客",
+      "OLD_REACTIVATION": "老客激活"
+    },
+    "origin": {
+      "GBA": "大湾区",
+      "HK": "香港",
+      "MAINLAND": "内地",
+      "MACAU_LOCAL": "澳门本地",
+      "SEA": "东南亚",
+      "INTL": "国际",
+      "UNKNOWN": "来源待定"
+    },
+    "venue": {
+      "MGM_PENINSULA": "澳门美高梅 · 半岛",
+      "MGM_COTAI": "美狮美高梅 · 氹仔",
+      "OTHER_MACAU_IR": "其他澳门综合度假村",
+      "UNSPECIFIED": "场地待定"
+    },
+    "occasion": {
+      "WEDDING_BANQUET": "婚宴宴会",
+      "VIP_TABLE": "贵宾厅 / 桌边礼遇",
+      "CONFERENCE": "会议活动",
+      "LEISURE": "休闲到访",
+      "OTHER": "其他"
+    },
+    "channel": {
+      "WECHAT_OFFICIAL": "官方微信",
+      "HOST_REFERRAL": "主机 / 礼宾推荐",
+      "OTA": "在线渠道",
+      "WALK_IN": "现场到访",
+      "PARTNER": "合作方",
+      "UNKNOWN": "渠道待定"
+    },
+    "field": {
+      "languagePref": "语言偏好",
+      "partySize": "预计人数",
+      "intent": "意向",
+      "priority": "优先级",
+      "channelTouchpoint": "触达渠道",
+      "eventOccasion": "场景 / 事由",
+      "refLastVisit": "上次到访",
+      "refLastProperty": "上次场地",
+      "refLtvTier": "历史层级",
+      "refHostName": "主机",
+      "refMemberIdMasked": "会员号（脱敏）",
+      "refNotes": "历史备注"
+    },
+    "radar": {
+      "title": "高价值潜力画像",
+      "subtitle": "六维规则指数：客源、场域、规模、场景、渠道与关系资产；可解释加权，非机器学习预测。",
+      "composite": "高价值潜力指数",
+      "compositeShort": "潜力",
+      "axis": {
+        "regionalValue": "区域价值",
+        "propertyStrategicFit": "场域契合",
+        "groupScale": "规模机会",
+        "occasionValue": "场景价值",
+        "channelTrust": "渠道信任",
+        "relationshipEquity": "关系资产"
+      }
+    }
+  },
+  "myBadges": {
+    "title": "我的徽章",
+    "streakCheckIn": "当前签到连击",
+    "streakFullDay": "闭环连击",
+    "memberTier": "会员等级",
+    "emptyBadges": "还没有徽章，多签到打卡试试吧"
+  },
+  "locale": {
+    "label": "语言",
+    "zh": "简体中文",
+    "en": "English"
+  }
+}

@@ -9,13 +9,16 @@
     </header>
 
     <main class="team-content">
-      <section class="week-card">
+      <section class="week-card week-card--interactive" @click="onWeekCardClick">
         <div class="week-switch">
-          <button class="icon-btn" type="button" @click="switchWeek(-1)">
+          <button class="icon-btn" type="button" @click.stop="switchWeek(-1)">
             <span class="material-symbols-outlined">chevron_left</span>
           </button>
-          <div class="week-title">当前周 {{ weekRangeLabel }}</div>
-          <button class="icon-btn" type="button" @click="switchWeek(1)">
+          <button type="button" class="week-title week-title-btn" @click.stop="openTeamScheduleGrid">
+            当前周 {{ weekRangeLabel }}
+            <span class="material-symbols-outlined week-title-icon" aria-hidden="true">grid_on</span>
+          </button>
+          <button class="icon-btn" type="button" @click.stop="switchWeek(1)">
             <span class="material-symbols-outlined">chevron_right</span>
           </button>
         </div>
@@ -25,13 +28,33 @@
             :key="day.date"
             class="day-pill"
             :class="{ active: day.date === selectedDate, today: day.isToday }"
-            @click="selectDate(day.date)"
+            @click.stop="selectDate(day.date)"
           >
             <span>{{ day.weekday }}</span>
             <strong>{{ day.dayNumber }}</strong>
           </button>
         </div>
       </section>
+
+      <section class="grid-io-card grid-io-card--compact">
+        <div class="grid-io-head">
+          <h2 class="grid-io-title">班次导入 / 导出</h2>
+          <button type="button" class="grid-io-guide-btn" @click="showGridGuide = true">
+            <span class="material-symbols-outlined" aria-hidden="true">menu_book</span>
+            Agent 指南
+          </button>
+        </div>
+        <div class="grid-io-toolbar">
+          <van-field v-model="gridFrom" class="grid-io-field" label="始" placeholder="YYYY-MM-DD" :border="false" />
+          <span class="grid-io-sep" aria-hidden="true">—</span>
+          <van-field v-model="gridTo" class="grid-io-field" label="终" placeholder="YYYY-MM-DD" :border="false" />
+          <van-button size="small" type="primary" plain :loading="exportGridBusy" @click="exportScheduleGrid">导出</van-button>
+          <van-button size="small" type="primary" :loading="importGridBusy" @click="triggerGridImport">导入</van-button>
+        </div>
+        <input ref="gridFileRef" type="file" accept=".json,application/json" class="hidden-file" @change="onGridFileSelected" />
+      </section>
+
+      <ScheduleGridGuidePopup v-model="showGridGuide" />
 
       <section class="summary-card">
         <h2>当日团队考勤汇报</h2>
@@ -112,6 +135,27 @@
       </section>
     </main>
 
+    <van-popup
+      v-model:show="showTeamScheduleGrid"
+      position="bottom"
+      round
+      teleport="body"
+      :z-index="2600"
+      :style="{ height: '92%' }"
+      :close-on-click-overlay="true"
+      safe-area-inset-bottom
+    >
+      <TeamScheduleWeekGrid
+        :active="showTeamScheduleGrid"
+        :week-start="weekStartDate"
+        title="团队排班周视图"
+        :show-legend="true"
+        @update:week-start="weekStartDate = $event"
+        @select-date="onTeamSchedulePickDate"
+        @close="showTeamScheduleGrid = false"
+      />
+    </van-popup>
+
     <van-popup v-model:show="showMonthPicker" position="bottom" round :style="{ height: '42%' }">
       <div class="month-popup">
         <h3>选择月份</h3>
@@ -130,21 +174,140 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { showFailToast } from 'vant'
+import { showFailToast, showSuccessToast } from 'vant'
 import AppBottomNav from '../../components/AppBottomNav.vue'
-import { getAdminTeam, getAttendanceByDate, getScheduleDay } from '../../api'
+import ScheduleGridGuidePopup from '../../components/ScheduleGridGuidePopup.vue'
+import TeamScheduleWeekGrid from '../../components/TeamScheduleWeekGrid.vue'
+import { readApiErrorMessage } from '../../lib/apiError'
+import { toLocalYMD } from '../../lib/fortuneUtils'
+import {
+  exportAdminScheduleGrid,
+  getAdminTeam,
+  getAttendanceByDate,
+  getAuthUsers,
+  getScheduleDay,
+  importAdminScheduleGrid,
+} from '../../api'
+import { enrichScheduleGridExport } from '../../lib/scheduleGridExport'
 import { normalizeAttendanceRecord, normalizeTeamMember } from '../../data/models'
 
 const DECLARE_RECORD_STATUSES = ['OFFICE', 'OUTING', 'DINING', 'BUSINESS_TRIP']
 
 const team = ref([])
-const selectedDate = ref(new Date().toISOString().slice(0, 10))
+const selectedDate = ref(toLocalYMD(new Date()))
+const showTeamScheduleGrid = ref(false)
+const showGridGuide = ref(false)
 const weekStartDate = ref(getWeekStart(new Date()))
 const selectedMemberIndex = ref(0)
 const showMonthPicker = ref(false)
 const selectedMemberRecords = ref([])
 const memberDeclareStateByUserId = ref({})
 const router = useRouter()
+
+const monthBounds = () => {
+  const d = new Date(`${selectedDate.value}T12:00:00`)
+  const from = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
+  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0)
+  const to = `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, '0')}-${String(last.getDate()).padStart(2, '0')}`
+  return { from, to }
+}
+
+const gridFrom = ref(monthBounds().from)
+const gridTo = ref(monthBounds().to)
+const exportGridBusy = ref(false)
+const importGridBusy = ref(false)
+const gridFileRef = ref(null)
+
+const resolveAuthUsersList = (payload) => {
+  if (!payload || typeof payload !== 'object') return []
+  const raw = payload.items ?? payload.users ?? payload.data
+  return Array.isArray(raw) ? raw : []
+}
+
+const loadAuthUsersForExport = async () => {
+  const { data } = await getAuthUsers()
+  return resolveAuthUsersList(data)
+}
+
+const exportScheduleGrid = async () => {
+  const from = gridFrom.value.trim()
+  const to = gridTo.value.trim()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
+    showFailToast('请填写正确的开始/结束日期（YYYY-MM-DD）')
+    return
+  }
+  if (from > to) {
+    showFailToast('开始日期不能晚于结束日期')
+    return
+  }
+  exportGridBusy.value = true
+  try {
+    const { data: rawExport } = await exportAdminScheduleGrid(from, to)
+    if (!rawExport || typeof rawExport !== 'object') {
+      showFailToast('导出数据无效')
+      return
+    }
+    let data
+    try {
+      data = await enrichScheduleGridExport(rawExport, loadAuthUsersForExport)
+    } catch {
+      showFailToast('账号列表加载失败，无法补全员工名册')
+      return
+    }
+    const employees = Array.isArray(data.employees) ? data.employees : []
+    if (employees.length === 0) {
+      showFailToast('未获取到员工账号，请确认已用管理员登录')
+      return
+    }
+    const jsonText = JSON.stringify(data, null, 2)
+    const blob = new Blob([jsonText], { type: 'application/json;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `schedule-grid-${from}_${to}.json`
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    URL.revokeObjectURL(url)
+    const assignCount = Array.isArray(data.assignments) ? data.assignments.length : 0
+    const userCount = Array.isArray(data.users) ? data.users.length : 0
+    const empCount = employees.length
+    const enrichedNote = data._usersEnrichedFrom ? '（已合并账号列表）' : ''
+    showSuccessToast(`已导出：${assignCount} 条排班 · ${userCount} 个账号（员工 ${empCount}）${enrichedNote}`)
+  } catch (error) {
+    const status = error?.response?.status
+    if (status === 404) {
+      showFailToast('导出接口不可用，请重新运行 scripts/dev-up.sh 重启后端')
+    } else {
+      showFailToast(await readApiErrorMessage(error, '导出失败'))
+    }
+  } finally {
+    exportGridBusy.value = false
+  }
+}
+
+const triggerGridImport = () => gridFileRef.value?.click()
+
+const onGridFileSelected = async (event) => {
+  const file = event.target.files?.[0]
+  event.target.value = ''
+  if (!file) return
+  importGridBusy.value = true
+  try {
+    const text = await file.text()
+    const payload = JSON.parse(text)
+    const { data } = await importAdminScheduleGrid(payload)
+    const applied = data.applied ?? 0
+    const skipped = data.skipped ?? 0
+    const unmatched = Array.isArray(data.unmatched) ? data.unmatched.length : 0
+    showSuccessToast(`导入完成：写入 ${applied} 条，跳过 ${skipped}，未匹配 ${unmatched}`)
+    await loadData()
+  } catch (error) {
+    showFailToast(await readApiErrorMessage(error, '导入失败'))
+  } finally {
+    importGridBusy.value = false
+  }
+}
 
 const monthOptions = computed(() => {
   const year = new Date(selectedDate.value).getFullYear()
@@ -161,8 +324,8 @@ const weekDays = computed(() => {
   return Array.from({ length: 7 }).map((_, index) => {
     const date = new Date(base)
     date.setDate(base.getDate() + index)
-    const dateText = date.toISOString().slice(0, 10)
-    const todayText = new Date().toISOString().slice(0, 10)
+    const dateText = toLocalYMD(date)
+    const todayText = toLocalYMD(new Date())
     return {
       date: dateText,
       weekday: ['一', '二', '三', '四', '五', '六', '日'][index],
@@ -179,6 +342,22 @@ const weekRangeLabel = computed(() => {
 })
 
 const selectedMember = computed(() => team.value[selectedMemberIndex.value] || null)
+
+const openTeamScheduleGrid = () => {
+  showTeamScheduleGrid.value = true
+}
+
+const onWeekCardClick = (event) => {
+  if (event.target.closest('.day-pill') || event.target.closest('.icon-btn')) return
+  openTeamScheduleGrid()
+}
+
+const onTeamSchedulePickDate = async (ymd) => {
+  showTeamScheduleGrid.value = false
+  selectedDate.value = ymd
+  weekStartDate.value = getWeekStart(new Date(`${ymd}T12:00:00`))
+  await loadData()
+}
 const selectedBehaviorSummary = computed(() => {
   const rows = selectedMemberRecords.value
   return {
@@ -212,7 +391,7 @@ function getWeekStart(dateInput) {
   const day = currentDate.getDay()
   const shift = day === 0 ? -6 : 1 - day
   currentDate.setDate(currentDate.getDate() + shift)
-  return currentDate.toISOString().slice(0, 10)
+  return toLocalYMD(currentDate)
 }
 
 const loadData = async () => {
@@ -287,7 +466,7 @@ const selectDate = async (date) => {
 const switchWeek = async (weekDelta) => {
   const nextStart = new Date(`${weekStartDate.value}T00:00:00`)
   nextStart.setDate(nextStart.getDate() + weekDelta * 7)
-  weekStartDate.value = nextStart.toISOString().slice(0, 10)
+  weekStartDate.value = toLocalYMD(nextStart)
   selectedDate.value = weekStartDate.value
   await loadData()
 }
@@ -321,6 +500,12 @@ watch(selectedMemberIndex, () => {
   void loadSelectedMemberRecords()
 })
 
+watch(selectedDate, () => {
+  const bounds = monthBounds()
+  gridFrom.value = bounds.from
+  gridTo.value = bounds.to
+})
+
 onMounted(async () => {
   weekStartDate.value = getWeekStart(new Date(`${selectedDate.value}T00:00:00`))
   await loadData()
@@ -333,9 +518,49 @@ onMounted(async () => {
 .team-topbar h1 { margin: 0; font-size: 20px; color:#102a5c; }
 .back-btn, .month-btn, .icon-btn { border:1px solid #d8e0f5; background:#fff; border-radius:999px; color:#2951c7; height:36px; min-width:36px; display:flex; align-items:center; justify-content:center; padding: 0 12px; }
 .team-content { padding: 14px 14px var(--app-nav-clearance); display:flex; flex-direction:column; gap:12px; }
-.week-card, .summary-card, .member-card { border:1px solid #d8e0f5; border-radius:14px; background:#fff; padding:12px; box-shadow:0 8px 18px rgba(15, 40, 120, 0.06); }
+.week-card, .summary-card, .member-card, .grid-io-card { border:1px solid #d8e0f5; border-radius:14px; background:#fff; padding:12px; box-shadow:0 8px 18px rgba(15, 40, 120, 0.06); }
+.week-card--interactive { cursor: pointer; }
+.week-card--interactive:active { background: #fafcff; }
+.grid-io-card--compact { padding:8px 10px; }
+.grid-io-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
+.grid-io-title { margin:0; font-size:14px; font-weight:700; color:#102a5c; }
+.grid-io-guide-btn {
+  display:inline-flex; align-items:center; gap:2px;
+  border:1px solid #dbe5ff; background:#f8fafc; color:#2c5ee8;
+  border-radius:999px; padding:4px 10px; font-size:11px; font-weight:600;
+}
+.grid-io-guide-btn .material-symbols-outlined { font-size:16px; }
+.grid-io-toolbar {
+  display:grid;
+  grid-template-columns: minmax(0,1fr) auto minmax(0,1fr) auto auto;
+  gap:4px 6px;
+  align-items:center;
+}
+.grid-io-sep { color:#94a3b8; font-size:12px; padding:0 2px; }
+.grid-io-field { background:#f8fafc; border-radius:8px; overflow:hidden; }
+.grid-io-field :deep(.van-cell) { padding:2px 8px; min-height:32px; }
+.grid-io-field :deep(.van-field__label) { width:1.6em; margin-right:4px; font-size:12px; color:#64748b; }
+.grid-io-field :deep(.van-field__control) { font-size:12px; }
+.hidden-file { display:none; }
+@media (max-width: 420px) {
+  .grid-io-toolbar { grid-template-columns: 1fr 1fr; }
+  .grid-io-sep { display:none; }
+  .grid-io-toolbar .van-button { grid-column: span 1; }
+}
 .week-switch { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
 .week-title { font-size: 14px; font-weight:700; color:#102a5c; }
+.week-title-btn {
+  border: 0;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.week-title-btn:active { background: #edf2ff; }
+.week-title-icon { font-size: 18px; color: #2c5ee8; }
 .week-days { display:grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap:6px; }
 .day-pill { border:1px solid #d8e0f5; background:#fff; border-radius:10px; padding:6px 2px; display:flex; flex-direction:column; gap:2px; align-items:center; color:#475569; }
 .day-pill.active { border-color:#2c5ee8; background:#edf2ff; color:#2c5ee8; font-weight:700; }

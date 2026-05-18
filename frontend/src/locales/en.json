@@ -1,0 +1,104 @@
+{
+  "home": {
+    "leadTileTitle": "Client leads",
+    "leadTileEmpty": "No leads to follow up",
+    "leadTileHint": "Claim and follow up quickly",
+    "leadCreated": "Created",
+    "leadStatusNew": "New"
+  },
+  "badges": {
+    "celebrateTitle": "Reward unlocked",
+    "celebrateSubtitle": "Keep the momentum",
+    "gotIt": "OK",
+    "kindUserBadge": "Badge",
+    "kindUserMedal": "Medal",
+    "kindAchievement": "Achievement",
+    "kindMember": "Member"
+  },
+  "lead": {
+    "title": "Leads",
+    "pickUp": "Claim lead",
+    "followUp": "Add follow-up",
+    "followUpLocked": "Claim this lead first (or wait until it is assigned to you) before adding a follow-up.",
+    "notePlaceholder": "Follow-up note (required)",
+    "timeline": "Activity",
+    "backHome": "Back to home",
+    "claimedAt": "Claimed at",
+    "profileTitle": "Lead profile",
+    "refTitle": "Reference data (reactivation)",
+    "segment": {
+      "NEW_PURE": "New guest",
+      "OLD_REACTIVATION": "Reactivation"
+    },
+    "origin": {
+      "GBA": "Greater Bay Area",
+      "HK": "Hong Kong",
+      "MAINLAND": "Mainland China",
+      "MACAU_LOCAL": "Macau local",
+      "SEA": "Southeast Asia",
+      "INTL": "International",
+      "UNKNOWN": "Origin TBD"
+    },
+    "venue": {
+      "MGM_PENINSULA": "MGM Macau · Peninsula",
+      "MGM_COTAI": "MGM Cotai",
+      "OTHER_MACAU_IR": "Other Macau IR",
+      "UNSPECIFIED": "Venue TBD"
+    },
+    "occasion": {
+      "WEDDING_BANQUET": "Wedding / banquet",
+      "VIP_TABLE": "VIP hosting",
+      "CONFERENCE": "MICE / conference",
+      "LEISURE": "Leisure visit",
+      "OTHER": "Other"
+    },
+    "channel": {
+      "WECHAT_OFFICIAL": "WeChat official",
+      "HOST_REFERRAL": "Host / concierge referral",
+      "OTA": "OTA / online",
+      "WALK_IN": "Walk-in",
+      "PARTNER": "Partner",
+      "UNKNOWN": "Channel TBD"
+    },
+    "field": {
+      "languagePref": "Language",
+      "partySize": "Party size (est.)",
+      "intent": "Intent",
+      "priority": "Priority",
+      "channelTouchpoint": "Touchpoint",
+      "eventOccasion": "Occasion",
+      "refLastVisit": "Last visit",
+      "refLastProperty": "Last property",
+      "refLtvTier": "Historical tier",
+      "refHostName": "Host",
+      "refMemberIdMasked": "Member ID (masked)",
+      "refNotes": "Historical notes"
+    },
+    "radar": {
+      "title": "High-value potential profile",
+      "subtitle": "Six-axis rule-based index (origin, venue fit, scale, occasion, channel, relationship equity). Weighted, explainable — not an ML predictor.",
+      "composite": "High-value potential index",
+      "compositeShort": "Score",
+      "axis": {
+        "regionalValue": "Regional value",
+        "propertyStrategicFit": "Venue fit",
+        "groupScale": "Group scale",
+        "occasionValue": "Occasion value",
+        "channelTrust": "Channel trust",
+        "relationshipEquity": "Relationship equity"
+      }
+    }
+  },
+  "myBadges": {
+    "title": "My badges",
+    "streakCheckIn": "Check-in streak",
+    "streakFullDay": "Full-day streak",
+    "memberTier": "Member tier",
+    "emptyBadges": "No badges yet — check in more often"
+  },
+  "locale": {
+    "label": "Language",
+    "zh": "简体中文",
+    "en": "English"
+  }
+}

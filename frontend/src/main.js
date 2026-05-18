@@ -6,5 +6,6 @@ import 'material-symbols/outlined.css'
 import './style.css'
 import App from './App.vue'
 import router from './router'
+import { i18n } from './i18n'
 
-createApp(App).use(createPinia()).use(router).use(Vant).mount('#app')
+createApp(App).use(i18n).use(createPinia()).use(router).use(Vant).mount('#app')

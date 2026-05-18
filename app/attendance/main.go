@@ -70,7 +70,13 @@ func main() {
 			return
 		}
 		recordID, _ := result.LastInsertId()
-		writeJSON(writer, http.StatusOK, map[string]any{"id": recordID})
+		response := map[string]any{"id": recordID}
+		if earned, rewardErr := processRewardsAfterSubmit(database, payload.UserID, payload.Status, payload.OccurredAt); rewardErr != nil {
+			response["rewardError"] = "streak_update_failed"
+		} else if len(earned) > 0 {
+			response["newlyEarnedBadges"] = earned
+		}
+		writeJSON(writer, http.StatusOK, response)
 	})
 
 	hsrv.HandleFunc("/v1/attendance/today", func(writer http.ResponseWriter, request *http.Request) {
@@ -319,6 +325,9 @@ ORDER BY sort_order ASC, title ASC`, itemCategory, itemRegion, itemRegion)
 	})
 
 	registerScheduleDayRoutes(hsrv, database)
+	registerRewardRoutes(hsrv, database)
+	registerLeadRoutes(hsrv, database)
+	registerFortuneRoutes(hsrv, database)
 
 	hsrv.HandleFunc("/healthz", func(writer http.ResponseWriter, request *http.Request) {
 		writeJSON(writer, http.StatusOK, map[string]string{"service": "attendance-svc", "status": "ok"})

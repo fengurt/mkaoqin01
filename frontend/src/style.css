@@ -1,32 +1,34 @@
 :root {
   --app-nav-clearance: calc(80px + env(safe-area-inset-bottom, 0px));
 
-  /* 全局品牌色 — 深蓝专业基调 + 克制点缀 */
-  --brand-bg: #f0f4fb;
-  --brand-surface: #e8edf6;
-  --brand-card: #ffffff;
-  --brand-primary: #1e3a8a;
-  --brand-primary-mid: #2563eb;
-  --brand-primary-soft: #dbeafe;
-  --brand-title: #0f172a;
-  --brand-text: #334155;
-  --brand-border: #cbd5e1;
-  --brand-subtext: #64748b;
-  --brand-success: #047857;
-  --brand-danger: #b91c1c;
-  --brand-warning: #c2410c;
+  /* Macau IR editorial — warm mist + charcoal + champagne gold (see design/DESIGN_REFERENCE.md) */
+  --accent-gold: #b8954f;
+  --accent-gold-soft: rgba(184, 149, 79, 0.14);
+  --brand-bg: #f3f0ea;
+  --brand-surface: #e9e4da;
+  --brand-card: #fdfbf7;
+  --brand-primary: #1e293b;
+  --brand-primary-mid: #6b5a32;
+  --brand-primary-soft: #f0e8d8;
+  --brand-title: #141821;
+  --brand-text: #3d3a34;
+  --brand-border: #d4cec2;
+  --brand-subtext: #6b6560;
+  --brand-success: #1d6b55;
+  --brand-danger: #9b1c1c;
+  --brand-warning: #a65f14;
 
-  /* 首页磁贴（与品牌协调） */
-  --metro-header-bg: #0f172a;
-  --metro-header-text: #f8fafc;
-  --metro-tile-in: #b45309;
-  --metro-tile-out: #0d9488;
-  --metro-tile-report: #1e40af;
-  --metro-tile-luck: #5b21b6;
-  --metro-pivot-bg: #f8fafc;
-  --metro-chip-bg: #0f172a;
+  --metro-header-bg: linear-gradient(180deg, #121620 0%, #1a2230 55%, #1e2636 100%);
+  --metro-header-text: #f7f3eb;
+  --metro-tile-in: #9a6b2f;
+  --metro-tile-out: #2d6f64;
+  --metro-tile-report: #243a5c;
+  --metro-tile-luck: #4a3268;
+  --metro-tile-lead: linear-gradient(142deg, #1a1816 0%, #2a2622 42%, #3a3228 100%);
+  --metro-pivot-bg: rgba(253, 251, 247, 0.92);
+  --metro-chip-bg: #1a2230;
 
-  /* Vant 组件联动（见 https://vant-ui.github.io/vant/ 主题变量） */
+  /* Vant */
   --van-primary-color: var(--brand-primary-mid);
   --van-success-color: var(--brand-success);
   --van-danger-color: var(--brand-danger);
@@ -46,7 +48,7 @@ html {
 }
 body {
   margin: 0;
-  font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-family: "DM Sans", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   background: var(--brand-bg);
   color: var(--brand-text);
   -webkit-tap-highlight-color: transparent;
@@ -71,7 +73,7 @@ body {
   border-radius: 14px;
   padding: 16px;
   margin-bottom: 10px;
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 8px 22px rgba(20, 24, 33, 0.06), 0 1px 0 rgba(255, 255, 255, 0.65) inset;
 }
 
 .page-title {
@@ -147,7 +149,7 @@ body {
 }
 
 .status-chip-active {
-  border-color: var(--brand-primary);
-  color: var(--brand-primary);
-  background: var(--brand-primary-soft);
+  border-color: var(--accent-gold);
+  color: var(--brand-primary-mid);
+  background: var(--accent-gold-soft);
 }

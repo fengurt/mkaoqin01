@@ -15,6 +15,8 @@
 
       <section class="card">
         <h3>关键入口</h3>
+        <van-cell title="客户线索" is-link @click="$router.push('/leads')" />
+        <van-cell title="我的徽章" is-link @click="$router.push('/me/badges')" />
         <van-cell title="我的考勤（日）" is-link @click="$router.push('/my-attendance/day')" />
         <van-cell title="我的考勤（周）" is-link @click="$router.push('/my-attendance/week')" />
         <van-cell title="我的考勤（月）" is-link @click="$router.push('/my-attendance/month')" />
@@ -28,6 +30,12 @@
         <van-cell v-if="isAdmin" title="账号管理（管理员）" is-link @click="$router.push('/me/accounts')" />
         <van-cell v-if="isAdmin" title="行程快捷配置（管理员）" is-link @click="$router.push('/me/schedule-quick-config')" />
         <van-cell v-if="isAdmin" title="班次与假期（管理员）" is-link @click="$router.push('/me/schedule-types-config')" />
+        <van-cell v-if="isAdmin" title="线索管理（管理员）" is-link @click="$router.push('/me/leads-admin')" />
+      </section>
+
+      <section class="card">
+        <h3>显示语言</h3>
+        <van-cell :title="localeTitle" is-link :value="localeLabel" @click="openLocalePicker" />
       </section>
 
       <section v-if="isAdmin" class="team-spotlight" @click="$router.push('/team-attendance/day')">
@@ -41,15 +49,40 @@
     </main>
 
     <AppBottomNav />
+
+    <van-action-sheet
+      v-model:show="showLocaleSheet"
+      :title="localeTitle"
+      :actions="localeActions"
+      @select="onLocaleSelect"
+    />
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import AppBottomNav from '../components/AppBottomNav.vue'
+import { setLocale } from '../i18n'
+
+const { t, locale } = useI18n()
 
 const user = JSON.parse(localStorage.getItem('user') || '{"id":1,"displayName":"演示用户","role":"employee"}')
 const isAdmin = computed(() => user.role === 'admin')
+
+const showLocaleSheet = ref(false)
+const localeTitle = computed(() => t('locale.label'))
+const localeLabel = computed(() => (locale.value === 'en' ? t('locale.en') : t('locale.zh')))
+const localeActions = computed(() => [{ name: t('locale.zh') }, { name: t('locale.en') }])
+
+const openLocalePicker = () => {
+  showLocaleSheet.value = true
+}
+
+const onLocaleSelect = (_action, index) => {
+  setLocale(index === 1 ? 'en' : 'zh-CN')
+  showLocaleSheet.value = false
+}
 </script>
 
 <style scoped>

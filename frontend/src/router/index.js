@@ -9,9 +9,14 @@ import DetailedAttendanceReport from '../views/screens/DetailedAttendanceReport.
 import EmployeeProfile from '../views/screens/EmployeeProfile.vue'
 import AccountSecurityView from '../views/screens/AccountSecurityView.vue'
 import AdminAccountManagementView from '../views/screens/AdminAccountManagementView.vue'
+import AdminEmployeeFortuneView from '../views/screens/AdminEmployeeFortuneView.vue'
 import AdminScheduleQuickConfigView from '../views/screens/AdminScheduleQuickConfigView.vue'
 import AdminScheduleTypesView from '../views/screens/AdminScheduleTypesView.vue'
 import TeamMemberHistoryView from '../views/screens/TeamMemberHistoryView.vue'
+import LeadFeedView from '../views/LeadFeedView.vue'
+import LeadDetailView from '../views/LeadDetailView.vue'
+import MyBadgesView from '../views/MyBadgesView.vue'
+import AdminLeadsView from '../views/AdminLeadsView.vue'
 
 const routes = [
   { path: '/', component: Login },
@@ -30,9 +35,14 @@ const routes = [
   { path: '/employee/profile', component: EmployeeProfile },
   { path: '/me/security', component: AccountSecurityView },
   { path: '/me/accounts', component: AdminAccountManagementView },
+  { path: '/me/accounts/:userId/fortune', component: AdminEmployeeFortuneView },
   { path: '/me/schedule-quick-config', component: AdminScheduleQuickConfigView },
   { path: '/me/schedule-types-config', component: AdminScheduleTypesView },
   { path: '/team-member/:userId', component: TeamMemberHistoryView },
+  { path: '/leads', component: LeadFeedView },
+  { path: '/leads/detail', component: LeadDetailView },
+  { path: '/me/badges', component: MyBadgesView },
+  { path: '/me/leads-admin', component: AdminLeadsView },
 ]
 
 const router = createRouter({
@@ -47,7 +57,16 @@ router.beforeEach((to) => {
   if (to.path === '/') return true
   const token = localStorage.getItem('token')
   if (!token) return '/'
-  if (to.path.startsWith('/team-attendance') || to.path === '/admin/report' || to.path === '/me/accounts' || to.path === '/me/schedule-quick-config' || to.path === '/me/schedule-types-config' || to.path.startsWith('/team-member/')) {
+  if (
+    to.path.startsWith('/team-attendance') ||
+    to.path === '/admin/report' ||
+    to.path === '/me/accounts' ||
+    to.path.startsWith('/me/accounts/') ||
+    to.path === '/me/schedule-quick-config' ||
+    to.path === '/me/schedule-types-config' ||
+    to.path === '/me/leads-admin' ||
+    to.path.startsWith('/team-member/')
+  ) {
     const user = JSON.parse(localStorage.getItem('user') || '{}')
     if (user.role !== 'admin') return '/me'
   }
