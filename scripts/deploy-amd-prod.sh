@@ -10,7 +10,7 @@ if [[ ! -f .env ]]; then
   exit 1
 fi
 
-mkdir -p data
+mkdir -p data data/uploads/fortune
 
 echo "==> Pull latest main"
 git pull origin main
